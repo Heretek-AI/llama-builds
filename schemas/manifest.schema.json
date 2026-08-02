@@ -32,7 +32,15 @@
   "$defs": {
     "target": {
       "type": "object",
-      "required": ["name", "repo", "ref", "backend", "arch", "capabilities", "build"],
+      "required": [
+        "name",
+        "repo",
+        "ref",
+        "backend",
+        "arch",
+        "capabilities",
+        "build"
+      ],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -118,7 +126,18 @@
         },
         "build_system": {
           "type": "string",
-          "enum": ["cmake", "make", "cibuildwheel", "cython", "go", "dotnet", "colcon", "dfx", "oci", "docs"],
+          "enum": [
+            "cmake",
+            "make",
+            "cibuildwheel",
+            "cython",
+            "go",
+            "dotnet",
+            "colcon",
+            "dfx",
+            "oci",
+            "docs"
+          ],
           "default": "cmake",
           "description": "Build system used by the target"
         },

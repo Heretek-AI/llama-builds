@@ -1,8 +1,7 @@
 ---
 name: heretek-manifest-codegen
 description: Generate manifest.json from targets/*/build.sh.
-allowed-tools: ['Bash', 'Read']
-
+allowed-tools: ["Bash", "Read"]
 ---
 
 # heretek-manifest-codegen

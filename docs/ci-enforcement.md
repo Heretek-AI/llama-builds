@@ -6,12 +6,12 @@ This document describes the required CI checks that must pass before any PR can 
 
 The following checks are enforced via GitHub branch protection rules on `main`:
 
-| Check | Workflow | What it validates |
-|-------|----------|-------------------|
-| **pre-commit** | `.github/workflows/pre-commit.yml` | Trailing whitespace, end-of-file, YAML/JSON validity, ruff lint+format, betterleaks secret scan |
-| **super-linter** | `.github/workflows/super-linter.yml` | Python (ruff), YAML, JSON, Shell, Markdown, GitHub Actions syntax |
-| **sonarcloud** | `.github/workflows/sonarcloud.yml` | Code quality gate, test coverage, maintainability rating |
-| **betterleaks** | (via pre-commit) | Secret detection across all tracked files |
+| Check            | Workflow                             | What it validates                                                                               |
+| ---------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| **pre-commit**   | `.github/workflows/pre-commit.yml`   | Trailing whitespace, end-of-file, YAML/JSON validity, ruff lint+format, betterleaks secret scan |
+| **super-linter** | `.github/workflows/super-linter.yml` | Python (ruff), YAML, JSON, Shell, Markdown, GitHub Actions syntax                               |
+| **sonarcloud**   | `.github/workflows/sonarcloud.yml`   | Code quality gate, test coverage, maintainability rating                                        |
+| **betterleaks**  | (via pre-commit)                     | Secret detection across all tracked files                                                       |
 
 ## Matrix build validation
 

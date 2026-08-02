@@ -23,29 +23,31 @@
 
 ## File Structure
 
-| File | Action | Responsibility |
-|------|--------|----------------|
-| `action.yml` | Create | Composite action definition — inputs, outputs, build steps |
-| `scripts/version_tag.py` | Create | Generate version tags (`{ref_prefix}-{build_num}`) |
-| `schemas/manifest.schema.json` | Modify | Add `version`, `gpu_target`, `build.os`, `build.artifact` fields |
-| `scripts/generate_manifest.py` | Modify | Handle new fields from METADATA + build outputs |
-| `targets/upstream-cpu/build.sh` | Create | First real target — upstream llama.cpp CPU baseline |
-| `scripts/audit_matrix.py` | Modify | Validate new manifest fields against matrix |
-| `tests/test_version_tag.py` | Create | Unit tests for version tag generation |
-| `tests/test_action.py` | Create | Tests for action metadata and input/output contract |
-| `tests/test_generate_manifest.py` | Modify | Extend with tests for new manifest fields |
-| `tests/test_manifest_schema.py` | Modify | Validate new schema fields with golden fixtures |
-| `tests/test_audit_matrix.py` | Modify | Validate new fields in matrix audit |
+| File                              | Action | Responsibility                                                   |
+| --------------------------------- | ------ | ---------------------------------------------------------------- |
+| `action.yml`                      | Create | Composite action definition — inputs, outputs, build steps       |
+| `scripts/version_tag.py`          | Create | Generate version tags (`{ref_prefix}-{build_num}`)               |
+| `schemas/manifest.schema.json`    | Modify | Add `version`, `gpu_target`, `build.os`, `build.artifact` fields |
+| `scripts/generate_manifest.py`    | Modify | Handle new fields from METADATA + build outputs                  |
+| `targets/upstream-cpu/build.sh`   | Create | First real target — upstream llama.cpp CPU baseline              |
+| `scripts/audit_matrix.py`         | Modify | Validate new manifest fields against matrix                      |
+| `tests/test_version_tag.py`       | Create | Unit tests for version tag generation                            |
+| `tests/test_action.py`            | Create | Tests for action metadata and input/output contract              |
+| `tests/test_generate_manifest.py` | Modify | Extend with tests for new manifest fields                        |
+| `tests/test_manifest_schema.py`   | Modify | Validate new schema fields with golden fixtures                  |
+| `tests/test_audit_matrix.py`      | Modify | Validate new fields in matrix audit                              |
 
 ---
 
 ### Task 1: Version Tag Utility
 
 **Files:**
+
 - Create: `scripts/version_tag.py`
 - Create: `tests/test_version_tag.py`
 
 **Interfaces:**
+
 - Consumes: upstream SHA string
 - Produces: `generate_version_tag(ref_sha: str, build_number: int) -> str` returns e.g. `"abc1234-1"`
 
@@ -199,10 +201,12 @@ llama-builds artifacts. Supports generation and parsing."
 ### Task 2: Manifest Schema Extension
 
 **Files:**
+
 - Modify: `schemas/manifest.schema.json`
 - Modify: `tests/test_manifest_schema.py`
 
 **Interfaces:**
+
 - Consumes: existing schema (version 1)
 - Produces: updated schema with new optional fields, bumped version to 2
 
@@ -356,7 +360,15 @@ Update `schemas/manifest.schema.json`:
   "$defs": {
     "target": {
       "type": "object",
-      "required": ["name", "repo", "ref", "backend", "arch", "capabilities", "build"],
+      "required": [
+        "name",
+        "repo",
+        "ref",
+        "backend",
+        "arch",
+        "capabilities",
+        "build"
+      ],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -449,10 +461,12 @@ Version bumped from 1 to 2 (integer const)."
 ### Task 3: Composite Action Definition
 
 **Files:**
+
 - Create: `action.yml`
 - Create: `tests/test_action.py`
 
 **Interfaces:**
+
 - Consumes: GitHub Actions runtime, git, cmake, ninja
 - Produces: `artifact_path`, `manifest_entry`, `resolved_sha`, `version_tag` outputs
 
@@ -873,10 +887,12 @@ scaffolded for future phases."
 ### Task 4: Update Manifest Generation for New Fields
 
 **Files:**
+
 - Modify: `scripts/generate_manifest.py`
 - Modify: `tests/test_generate_manifest.py`
 
 **Interfaces:**
+
 - Consumes: METADATA headers from `targets/*/build.sh`, version tag utility
 - Produces: Manifest dict with new fields (`version`, `gpu_target`, `build.os`, `build.artifact`)
 
@@ -994,6 +1010,7 @@ Expected: FAIL — `version` field not populated, schema version still 1
 In `scripts/generate_manifest.py`:
 
 1. Update `METADATA_PATTERN` to also match `gpu_target`:
+
 ```python
 # Already handled by the generic pattern — no change needed
 ```
@@ -1090,10 +1107,12 @@ generated manifest entries. Schema version bumped to 2."
 ### Task 5: Upstream CPU Target
 
 **Files:**
+
 - Create: `targets/upstream-cpu/build.sh`
 - Create: `targets/upstream-cpu/` directory
 
 **Interfaces:**
+
 - Consumes: METADATA header contract (scraped by generate_manifest.py)
 - Produces: Manifest entry for upstream llama.cpp CPU baseline
 
@@ -1224,10 +1243,12 @@ METADATA header validates against manifest schema v2."
 ### Task 6: Update Audit Matrix for New Fields
 
 **Files:**
+
 - Modify: `scripts/audit_matrix.py`
 - Modify: `tests/test_audit_matrix.py`
 
 **Interfaces:**
+
 - Consumes: manifest dict with v2 fields, matrix.yml
 - Produces: validation errors for mismatches
 
@@ -1363,10 +1384,12 @@ individual build metadata fields."
 ### Task 7: Update Manifest and Verify End-to-End
 
 **Files:**
+
 - Modify: `manifest.json` (regenerated)
 - Modify: `tests/test_template.py` (update for v2)
 
 **Interfaces:**
+
 - Consumes: all previous tasks
 - Produces: updated manifest.json, all tests passing
 
@@ -1381,6 +1404,7 @@ Expected: manifest.json now contains the upstream-cpu target with v2 fields.
 Run: `python -c "import json; m = json.load(open('manifest.json')); print(json.dumps(m, indent=2))"`
 
 Expected output should include:
+
 ```json
 {
   "version": 2,

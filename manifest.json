@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "generated_at": "2026-08-02T21:54:56.271306+00:00",
+  "generated_at": "2026-08-02T21:55:40.735291+00:00",
   "targets": {
     "ik-llama-cpp": {
       "name": "ik_llama.cpp (SOTA IQ*K quants)",
@@ -9,12 +9,7 @@
       "backend": "cpu",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": [
-        "chat",
-        "embed",
-        "iq_k",
-        "trellis"
-      ],
+      "capabilities": ["chat", "embed", "iq_k", "trellis"],
       "version": "cb9147f-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -47,12 +42,7 @@
       "backend": "cuda",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": [
-        "chat",
-        "embed",
-        "iq_k",
-        "trellis"
-      ],
+      "capabilities": ["chat", "embed", "iq_k", "trellis"],
       "version": "cb9147f-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -85,11 +75,7 @@
       "backend": "cuda",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": [
-        "chat",
-        "embed",
-        "dgx-spark"
-      ],
+      "capabilities": ["chat", "embed", "dgx-spark"],
       "version": "9131f2e-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -122,10 +108,7 @@
       "backend": "cpu",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": [
-        "chat",
-        "embed"
-      ],
+      "capabilities": ["chat", "embed"],
       "version": "0ab9d6f-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -158,11 +141,7 @@
       "backend": "cuda",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": [
-        "chat",
-        "embed",
-        "flash-attn"
-      ],
+      "capabilities": ["chat", "embed", "flash-attn"],
       "version": "0ab9d6f-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -195,10 +174,7 @@
       "backend": "rocm",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": [
-        "chat",
-        "embed"
-      ],
+      "capabilities": ["chat", "embed"],
       "version": "0ab9d6f-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -231,10 +207,7 @@
       "backend": "vulkan",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": [
-        "chat",
-        "embed"
-      ],
+      "capabilities": ["chat", "embed"],
       "version": "0ab9d6f-1",
       "build": {
         "runner": "ubuntu-latest",

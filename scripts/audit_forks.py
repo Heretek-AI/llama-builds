@@ -102,6 +102,7 @@ def audit_all_forks(
             continue
 
         from scripts.metadata_common import MetadataParseError, parse_metadata_raw
+
         try:
             raw = parse_metadata_raw(build_sh)
         except MetadataParseError:
@@ -126,7 +127,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--targets-dir", type=Path, default=TARGETS_DIR)
     parser.add_argument("--output", type=Path, default=HEALTH_REPORT)
     parser.add_argument("--dry-run", action="store_true", help="Print report, don't write file")
-    parser.add_argument("--token", type=str, default=None, help="GitHub token (or GITHUB_TOKEN env)")
+    parser.add_argument(
+        "--token", type=str, default=None, help="GitHub token (or GITHUB_TOKEN env)"
+    )
     args = parser.parse_args(argv)
 
     token = args.token or os.environ.get("GITHUB_TOKEN")

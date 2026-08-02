@@ -21,6 +21,7 @@
 ## Task 1: Delete secret-scan.yml Workflow
 
 **Files:**
+
 - Delete: `.github/workflows/secret-scan.yml`
 
 - [ ] **Step 1: Delete the workflow file**
@@ -52,24 +53,27 @@ Betterleaks (via pre-commit) covers the same need without licensing."
 ## Task 2: Update .pre-commit-config.yaml
 
 **Files:**
+
 - Modify: `.pre-commit-config.yaml`
 
 - [ ] **Step 1: Replace gitleaks hook with betterleaks**
 
 Replace:
+
 ```yaml
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.4
-    hooks:
-      - id: gitleaks
+- repo: https://github.com/gitleaks/gitleaks
+  rev: v8.18.4
+  hooks:
+    - id: gitleaks
 ```
 
 With:
+
 ```yaml
-  - repo: https://github.com/betterleaks/betterleaks
-    rev: v1.7.3
-    hooks:
-      - id: betterleaks
+- repo: https://github.com/betterleaks/betterleaks
+  rev: v1.7.3
+  hooks:
+    - id: betterleaks
 ```
 
 - [ ] **Step 2: Fix trailing whitespace on line 20**
@@ -99,11 +103,13 @@ original gitleaks author, and has better filtering capabilities."
 ## Task 3: Update pre-commit.yml Workflow
 
 **Files:**
+
 - Modify: `.github/workflows/pre-commit.yml`
 
 - [ ] **Step 1: Update action versions and add betterleaks install**
 
 Replace entire file with:
+
 ```yaml
 name: pre-commit
 on:
@@ -151,11 +157,13 @@ git commit -m "ci: update pre-commit workflow to latest versions
 ## Task 4: Update super-linter.yml Workflow
 
 **Files:**
+
 - Modify: `.github/workflows/super-linter.yml`
 
 - [ ] **Step 1: Update action path and versions**
 
 Replace entire file with:
+
 ```yaml
 name: super-linter
 on:
@@ -211,18 +219,21 @@ git commit -m "ci: update super-linter to v8
 ## Task 5: Update matrix.yml Workflow
 
 **Files:**
+
 - Modify: `.github/workflows/matrix.yml`
 
 - [ ] **Step 1: Update action version**
 
 Change line 18 from:
+
 ```yaml
-      - uses: actions/checkout@v4
+- uses: actions/checkout@v4
 ```
 
 To:
+
 ```yaml
-      - uses: actions/checkout@v7
+- uses: actions/checkout@v7
 ```
 
 - [ ] **Step 2: Verify changes**
@@ -245,6 +256,7 @@ git commit -m "ci: bump actions/checkout to v7 in matrix workflow"
 ## Task 6: Fix File Hygiene
 
 **Files:**
+
 - Modify: `.claude/hooks/.lockfile`
 - Modify: `.heretek-harness.json`
 

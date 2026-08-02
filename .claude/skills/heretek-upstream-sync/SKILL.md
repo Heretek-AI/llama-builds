@@ -1,8 +1,7 @@
 ---
 name: heretek-upstream-sync
 description: Test a new llama.cpp upstream SHA before promoting to a release.
-allowed-tools: ['Bash']
-
+allowed-tools: ["Bash"]
 ---
 
 # heretek-upstream-sync

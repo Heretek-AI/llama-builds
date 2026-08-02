@@ -1,15 +1,18 @@
 # llama-builds
 
 ## Project summary
+
 CI/CD registry for llama.cpp family builds.
 
 ## Stack & runtime targets
+
 - Languages: Python 3.11+
 - Package managers: pip, setuptools
 - OS/arch: Linux x86_64
 - Outputs: pre-compiled distributed bundles and/or a local CLI runtime.
 
 ## Build, test, lint, run commands
+
 - Build: `python -m build`
 - Test: `pytest`
 - Lint: `ruff check .`
@@ -18,6 +21,7 @@ CI/CD registry for llama.cpp family builds.
 - Audit matrix: `python -m scripts.audit_matrix`
 
 ## Project structure
+
 ```
 llama-builds/
 ├── action.yml              Composite GitHub Action for building llama.cpp forks
@@ -49,18 +53,21 @@ llama-builds/
 ```
 
 ## Conventions
+
 - Code style: enforced by pre-commit + super-linter.
 - Branch naming: `feat/<scope>`, `fix/<scope>`, `chore/<scope>`.
 - Commit messages: Conventional Commits.
 - PRs require a linked GitHub Issue (`Closes #<id>` or `Issue: #<id>`).
 
 ## Do / Don't list
+
 - DO validate build outputs against the manifest schema.
 - DO run the four required CI checks locally before pushing.
 - DON'T push directly to `main`; PRs only.
 - DON'T commit build artifacts or `.env` files.
 
 ## Pointer block
+
 - GitHub Project: https://github.com/orgs/Heretek-AI/projects/1
 - SonarCloud project: https://sonarcloud.io/project/overview?id=Heretek-AI_llama-builds
 - Super-linter config: .github/linters/

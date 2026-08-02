@@ -5,13 +5,17 @@ labels: ["type/refactor"]
 ---
 
 ## Motivation
+
 <one paragraph>
 
 ## Scope
+
 - <files or modules>
 
 ## Test plan
+
 - <one paragraph>
 
 ## Risk
+
 <one paragraph>

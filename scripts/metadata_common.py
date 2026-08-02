@@ -47,10 +47,20 @@ NEW_FIELDS: dict[str, str | bool | int | list[str] | None] = {
 }
 
 # Valid enum values for v3 fields
-VALID_BUILD_SYSTEMS = frozenset({
-    "cmake", "make", "cibuildwheel", "cython", "go", "dotnet",
-    "colcon", "dfx", "oci", "docs",
-})
+VALID_BUILD_SYSTEMS = frozenset(
+    {
+        "cmake",
+        "make",
+        "cibuildwheel",
+        "cython",
+        "go",
+        "dotnet",
+        "colcon",
+        "dfx",
+        "oci",
+        "docs",
+    }
+)
 VALID_LAYERS = frozenset({"base", "backend", "variant", "docs"})
 VALID_STATUSES = frozenset({"active", "skipped", "deprecated", "archived"})
 VALID_GPU_TOOLCHAINS = frozenset({"cuda", "hip", "metal", "vulkan", "none"})
@@ -139,9 +149,7 @@ def parse_metadata_typed(build_sh: Path) -> dict:
     result["ref"] = raw.get("ref", CORE_FIELDS["ref"])
     result["backend"] = raw.get("backend", CORE_FIELDS["backend"])
     result["arch"] = raw.get("arch", CORE_FIELDS["arch"])
-    result["gpu_target"] = _coerce_nullable_string(
-        raw.get("gpu_target", CORE_FIELDS["gpu_target"])
-    )
+    result["gpu_target"] = _coerce_nullable_string(raw.get("gpu_target", CORE_FIELDS["gpu_target"]))
 
     # CSV fields
     caps_raw = raw.get("capabilities", "")

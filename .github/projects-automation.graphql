@@ -3,8 +3,12 @@
 # then `gh api graphql -f query @.github/projects-automation.graphql`.
 
 mutation {
-  createProjectV2Field(input: { projectId: "1", dataType: SINGLE_SELECT, name: "Status" }) {
-    projectV2Field { id }
+  createProjectV2Field(
+    input: { projectId: "1", dataType: SINGLE_SELECT, name: "Status" }
+  ) {
+    projectV2Field {
+      id
+    }
   }
 }
 

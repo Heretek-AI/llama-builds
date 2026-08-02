@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+
 from scripts.audit_forks import audit_all_forks, check_repo_health
 
 
@@ -15,7 +16,9 @@ def tmp_targets(tmp_path: Path) -> Path:
     """Create a minimal targets/ tree with two build.sh files."""
     (tmp_path / "targets").mkdir()
     (tmp_path / "targets" / "_template").mkdir()
-    (tmp_path / "targets" / "_template" / "build.sh").write_text("# METADATA\n# name=T\n# repo=o/r\n# ref=abc1234\n# backend=cpu\n")
+    (tmp_path / "targets" / "_template" / "build.sh").write_text(
+        "# METADATA\n# name=T\n# repo=o/r\n# ref=abc1234\n# backend=cpu\n"
+    )
 
     for slug in ("upstream-cpu", "ik-llama-cpp"):
         d = tmp_path / "targets" / slug
@@ -81,7 +84,7 @@ def test_health_report_output_format(tmp_targets: Path) -> None:
     schema_keys = {"generated_at", "targets", "summary"}
     assert set(report.keys()) == schema_keys
 
-    for _name, info in report["targets"].items():
+    for info in report["targets"].values():
         assert "repo" in info
         assert "health_status" in info
         assert info["health_status"] in ("healthy", "stale", "archived", "not_found", "unknown")

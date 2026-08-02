@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: 'Target slug to build (e.g. ik-llama-cpp-cuda)'
+        description: "Target slug to build (e.g. ik-llama-cpp-cuda)"
         required: true
         type: string
       backend:
-        description: 'Backend (cuda, rocm, vulkan)'
+        description: "Backend (cuda, rocm, vulkan)"
         required: true
         type: choice
         options:
@@ -16,10 +16,10 @@ on:
           - rocm
           - vulkan
       cuda_arch:
-        description: 'CUDA architecture (e.g. 89 for sm_89)'
+        description: "CUDA architecture (e.g. 89 for sm_89)"
         required: false
         type: string
-        default: '89'
+        default: "89"
 
 permissions:
   contents: write

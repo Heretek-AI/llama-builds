@@ -91,8 +91,7 @@ def _audit_parent_references(targets_dir: Path, manifest: dict) -> list[str]:
 
         if parent not in targets:
             errors.append(
-                f"Target '{slug}' references parent '{parent}' "
-                f"which does not exist in the manifest"
+                f"Target '{slug}' references parent '{parent}' which does not exist in the manifest"
             )
             continue
 
@@ -101,9 +100,7 @@ def _audit_parent_references(targets_dir: Path, manifest: dict) -> list[str]:
         current = parent
         while current is not None:
             if current in visited:
-                errors.append(
-                    f"Target '{slug}' has a parent cycle through '{current}'"
-                )
+                errors.append(f"Target '{slug}' has a parent cycle through '{current}'")
                 break
             visited.add(current)
             current_parent = targets.get(current, {}).get("parent")

@@ -14,4 +14,4 @@ area/infra:
   - sonar-project.properties
 area/docs:
   - docs/**/*
-  - '**/*.md'
+  - "**/*.md"

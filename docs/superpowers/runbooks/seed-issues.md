@@ -44,6 +44,7 @@ DRY_RUN=1 ./scripts/seed-issues.sh seeds/llama-builds.yaml
 ### Per-repo slug convention
 
 Each seed file is named after its target repo:
+
 - `seeds/llama-builds.yaml` → issues for `Heretek-AI/llama-builds`
 - `seeds/heretek-manager.yaml` → issues for `Heretek-AI/heretek-manager`
 
@@ -86,8 +87,8 @@ yq '.[].labels[]' seeds/llama-builds.yaml | sort -u
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `gh: not authenticated` | No GitHub auth | Run `gh auth login` |
-| Issues created with duplicate content | Seed-id mismatch | Check HTML comment in issue body |
-| Rate limit errors | Too many API calls | Wait 60s, re-run (idempotent) |
+| Symptom                               | Cause              | Fix                              |
+| ------------------------------------- | ------------------ | -------------------------------- |
+| `gh: not authenticated`               | No GitHub auth     | Run `gh auth login`              |
+| Issues created with duplicate content | Seed-id mismatch   | Check HTML comment in issue body |
+| Rate limit errors                     | Too many API calls | Wait 60s, re-run (idempotent)    |

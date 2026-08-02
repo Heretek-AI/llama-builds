@@ -136,15 +136,11 @@ def validate_parent_chain(
 
     while current is not None:
         if current == slug:
-            errors.append(
-                f"Target '{slug}' has a parent cycle: parent chain loops back to self"
-            )
+            errors.append(f"Target '{slug}' has a parent cycle: parent chain loops back to self")
             break
 
         if current in visited:
-            errors.append(
-                f"Target '{slug}' parent chain has a cycle through '{current}'"
-            )
+            errors.append(f"Target '{slug}' parent chain has a cycle through '{current}'")
             break
 
         visited.add(current)
@@ -162,9 +158,7 @@ def validate_parent_chain(
             raw = parse_metadata_raw(parent_build_sh)
             current = raw.get("parent") or None
         except MetadataParseError:
-            errors.append(
-                f"Parent target '{current}' has no valid METADATA block"
-            )
+            errors.append(f"Parent target '{current}' has no valid METADATA block")
             break
 
     return errors

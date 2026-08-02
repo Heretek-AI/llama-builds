@@ -20,7 +20,10 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "bash .claude/hooks/PreToolUse/deny-destructive.sh" }
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/PreToolUse/deny-destructive.sh"
+          }
         ]
       }
     ],
@@ -28,7 +31,10 @@
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
-          { "type": "command", "command": "bash .claude/hooks/PostToolUse/run-pre-commit.sh" }
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/PostToolUse/run-pre-commit.sh"
+          }
         ]
       }
     ],
@@ -36,7 +42,10 @@
       {
         "matcher": "*",
         "hooks": [
-          { "type": "command", "command": "bash .claude/hooks/Stop/verify-lint.sh" }
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/Stop/verify-lint.sh"
+          }
         ]
       }
     ]

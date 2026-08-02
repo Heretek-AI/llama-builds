@@ -5,8 +5,10 @@ labels: ["type/spec"]
 ---
 
 ## Spec URL
+
 <path under docs/superpowers/specs/>
 
 ## Tracking
+
 - Spec tracking Issue: #<id>
 - Roadmap project: <url>
