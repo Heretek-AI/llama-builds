@@ -65,7 +65,7 @@ def _parse_matrix_targets(matrix_yml: str) -> set[str]:
     targets = set()
 
     jobs = data.get("jobs", {})
-    for job_name, job_def in jobs.items():
+    for _job_name, job_def in jobs.items():
         strategy = job_def.get("strategy", {})
         matrix = strategy.get("matrix", {})
         includes = matrix.get("include", [])
