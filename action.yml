@@ -299,7 +299,7 @@ runs:
         ARCHIVE_NAME="${{ steps.archive.outputs.archive_name }}"
         OS_NAME="ubuntu"
 
-        python3 -c "
+        MANIFEST_ENTRY=$(python3 -c "
         import json, sys
         entry = {
             'name': f'{sys.argv[1]} ({sys.argv[2]})',
@@ -326,8 +326,8 @@ runs:
         print(json.dumps(entry))
         " "${{ inputs.repo }}" "${{ inputs.backend }}" "$FULL_SHA" \
           "${{ inputs.arch }}" "${{ inputs.gpu_target }}" \
-          "${{ inputs.cmake_flags }}" "$VERSION_TAG" "$OS_NAME" "$ARCHIVE_NAME" \
-        >> "$GITHUB_OUTPUT"
+          "${{ inputs.cmake_flags }}" "$VERSION_TAG" "$OS_NAME" "$ARCHIVE_NAME")
+        echo "manifest_entry=$MANIFEST_ENTRY" >> "$GITHUB_OUTPUT"
 
     - name: Set outputs
       shell: bash
