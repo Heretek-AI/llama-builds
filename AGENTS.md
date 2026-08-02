@@ -16,7 +16,6 @@ CI/CD registry for llama.cpp family builds.
 - Build: `python -m build`
 - Test: `pytest`
 - Lint: `ruff check .`
-- Run: `python -m heretek_builds --help`
 - Generate manifest: `python -m scripts.generate_manifest`
 - Audit matrix: `python -m scripts.audit_matrix`
 
@@ -46,7 +45,7 @@ llama-builds/
 ├── docs/                   Design docs, specs, and runbooks
 ├── AGENTS.md
 ├── CLAUDE.md
-├── manifest.json           Generated build manifest (v2)
+├── manifest.json           Generated build manifest (v3)
 ├── sonar-project.properties
 ├── .pre-commit-config.yaml
 └── README.md
