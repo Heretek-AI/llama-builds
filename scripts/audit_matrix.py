@@ -62,13 +62,15 @@ def audit_targets_dir(targets_dir: Path, manifest: dict) -> list[str]:
                 if "# METADATA" in content:
                     fs_targets.add(slug)
 
-    for target in manifest_targets - fs_targets:
-        errors.append(f"Manifest target '{target}' has no build.sh with METADATA in targets/")
+    errors.extend(
+        f"Manifest target '{target}' has no build.sh with METADATA in targets/"
+        for target in manifest_targets - fs_targets
+    )
 
-    for target in fs_targets - manifest_targets:
-        errors.append(
-            f"Target '{target}' has build.sh but no manifest entry (run generate_manifest)"
-        )
+    errors.extend(
+        f"Target '{target}' has build.sh but no manifest entry (run generate_manifest)"
+        for target in fs_targets - manifest_targets
+    )
 
     # Validate parent references in manifest
     errors.extend(_audit_parent_references(targets_dir, manifest))

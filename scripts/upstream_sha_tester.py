@@ -166,9 +166,11 @@ def validate_sha(repo: str, sha: str, backend: str = "cpu") -> list[str]:
             return errors
 
         # Validate required fields
-        for field in ["name", "repo", "backend"]:
-            if field not in meta:
-                errors.append(f"METADATA missing required field: {field}")
+        errors.extend(
+            f"METADATA missing required field: {field}"
+            for field in ["name", "repo", "backend"]
+            if field not in meta
+        )
 
         # Validate backend against allowed values
         allowed_backends = {"cpu", "cuda", "rocm", "vulkan", "docs"}

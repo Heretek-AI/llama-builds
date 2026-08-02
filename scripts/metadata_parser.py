@@ -72,20 +72,20 @@ def generate_matrix(targets_dir: Path) -> dict:
             continue
         meta = parse_metadata(build_sh)
         if meta["backend"] == "rocm" and meta["gpu_targets"]:
-            for family in meta["gpu_targets"]:
-                for isa in expand_gpu_family(family):
-                    entries.append(
-                        {
-                            "target": target_name,
-                            "backend": meta["backend"],
-                            "arch": meta["arch"],
-                            "gfx_target": isa,
-                            "repo": meta["repo"],
-                            "ref": meta["ref"],
-                            "bundle_strategy": meta["bundle_strategy"],
-                            "capabilities": meta["capabilities"],
-                        }
-                    )
+            entries.extend(
+                {
+                    "target": target_name,
+                    "backend": meta["backend"],
+                    "arch": meta["arch"],
+                    "gfx_target": isa,
+                    "repo": meta["repo"],
+                    "ref": meta["ref"],
+                    "bundle_strategy": meta["bundle_strategy"],
+                    "capabilities": meta["capabilities"],
+                }
+                for family in meta["gpu_targets"]
+                for isa in expand_gpu_family(family)
+            )
         else:
             entries.append(
                 {
