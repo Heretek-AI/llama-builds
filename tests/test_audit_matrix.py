@@ -20,7 +20,7 @@ def schema():
 @pytest.fixture
 def valid_manifest():
     return {
-        "version": 2,
+        "version": 3,
         "generated_at": "2026-08-02T00:00:00Z",
         "targets": {
             "cpu": {
@@ -97,7 +97,7 @@ class TestAuditTargetsDir:
         (target_dir / "build.sh").write_text(METADATA_BLOCK)
 
         manifest = {
-            "version": 2,
+            "version": 3,
             "generated_at": "2026-08-02T00:00:00Z",
             "targets": {},
         }
@@ -108,7 +108,7 @@ class TestAuditTargetsDir:
         targets_dir = tmp_path / "targets"
         targets_dir.mkdir()
         manifest = {
-            "version": 2,
+            "version": 3,
             "generated_at": "2026-08-02T00:00:00Z",
             "targets": {},
         }
@@ -122,7 +122,7 @@ class TestAuditTargetsDir:
         (target_dir / "build.sh").write_text("#!/usr/bin/env bash\necho 'no metadata'\n")
 
         manifest = {
-            "version": 2,
+            "version": 3,
             "generated_at": "2026-08-02T00:00:00Z",
             "targets": {
                 "no-meta": {

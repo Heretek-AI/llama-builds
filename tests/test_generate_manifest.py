@@ -90,7 +90,7 @@ class TestGenerateManifest:
         targets = tmp_path / "targets"
         targets.mkdir()
         manifest = generate_manifest(targets_dir=targets)
-        assert manifest["version"] == 2
+        assert manifest["version"] == 3
         assert manifest["targets"] == {}
 
     def test_single_target(self, tmp_path):
@@ -250,10 +250,10 @@ class TestGenerateManifestV2:
         target = manifest["targets"]["cpu"]
         assert target["build"]["os"] == "ubuntu"
 
-    def test_manifest_schema_version_2(self, tmp_path):
-        """Generated manifest uses schema version 2."""
+    def test_manifest_schema_version_3(self, tmp_path):
+        """Generated manifest uses schema version 3."""
         manifest = generate_manifest(targets_dir=tmp_path / "targets")
-        assert manifest["version"] == 2
+        assert manifest["version"] == 3
 
 
 class TestUpstreamCpuTarget:

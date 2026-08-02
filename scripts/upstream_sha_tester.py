@@ -183,7 +183,7 @@ def validate_sha(repo: str, sha: str, backend: str = "cpu") -> list[str]:
         capabilities = [c.strip() for c in caps_raw.split(",") if c.strip()]
 
         manifest_entry = {
-            "version": 2,
+            "version": 3,
             "generated_at": datetime.now(UTC).isoformat(),
             "targets": {
                 "test": {

@@ -10,7 +10,7 @@
   "properties": {
     "version": {
       "type": "integer",
-      "const": 2,
+      "const": 3,
       "description": "Manifest schema version"
     },
     "generated_at": {
@@ -98,6 +98,97 @@
               "description": "Filename of the archived build artifact"
             }
           }
+        },
+        "default_branch": {
+          "type": "string",
+          "enum": ["main", "master"],
+          "default": "main",
+          "description": "Default branch of the upstream repository"
+        },
+        "gpu_toolchain": {
+          "type": "string",
+          "enum": ["cuda", "hip", "metal", "vulkan", "none"],
+          "default": "none",
+          "description": "GPU toolchain used for compilation"
+        },
+        "extra_cmake_flags": {
+          "type": "string",
+          "default": "",
+          "description": "Additional CMake flags for the build"
+        },
+        "build_system": {
+          "type": "string",
+          "enum": ["cmake", "make", "cibuildwheel", "cython", "go", "dotnet", "colcon", "dfx", "oci", "docs"],
+          "default": "cmake",
+          "description": "Build system used by the target"
+        },
+        "binary_names": {
+          "type": "string",
+          "default": "llama-server,llama-cli",
+          "description": "Comma-separated list of expected binary names"
+        },
+        "test_target": {
+          "type": "string",
+          "default": "",
+          "description": "CMake or build system test target name"
+        },
+        "layer": {
+          "type": "string",
+          "enum": ["base", "backend", "variant", "docs"],
+          "default": "base",
+          "description": "Build layer in the dependency hierarchy"
+        },
+        "parent": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Parent target slug (for layered builds)"
+        },
+        "ci_capable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this target can run in CI"
+        },
+        "ci_compile_capable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this target can compile in CI"
+        },
+        "ci_test_capable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this target can run tests in CI"
+        },
+        "is_llama_cpp_fork": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this target is a llama.cpp fork or derivative"
+        },
+        "smoke_test": {
+          "type": "string",
+          "default": "",
+          "description": "Smoke test command or script"
+        },
+        "upstream_ref": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Upstream ref SHA for lineage tracking"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "skipped", "deprecated", "archived"],
+          "default": "active",
+          "description": "Target lifecycle status"
+        },
+        "skip_reason": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Reason for skipping this target"
+        },
+        "repos": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional repos to track for this target"
         }
       }
     }

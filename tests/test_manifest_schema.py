@@ -17,7 +17,7 @@ def schema():
 def golden_manifest():
     """Minimal valid manifest with no targets (empty targets tree)."""
     return {
-        "version": 2,
+        "version": 3,
         "generated_at": "2026-08-02T00:00:00Z",
         "targets": {},
     }
@@ -27,7 +27,7 @@ def golden_manifest():
 def manifest_with_target():
     """Manifest with one realistic target entry."""
     return {
-        "version": 2,
+        "version": 3,
         "generated_at": "2026-08-02T00:00:00Z",
         "targets": {
             "cpu": {
@@ -125,8 +125,8 @@ class TestSchemaV2Fields:
         self.validate = jsonschema.validate
         self.ValidationError = jsonschema.ValidationError
 
-    def test_version_bumped_to_2(self, schema):
-        assert schema["properties"]["version"]["const"] == 2
+    def test_version_bumped_to_3(self, schema):
+        assert schema["properties"]["version"]["const"] == 3
 
     def test_gpu_target_field_exists(self, schema):
         target_schema = schema["$defs"]["target"]
@@ -150,7 +150,7 @@ class TestSchemaV2Fields:
 
     def test_full_v2_manifest_validates(self, schema):
         manifest = {
-            "version": 2,
+            "version": 3,
             "generated_at": "2026-08-02T00:00:00Z",
             "targets": {
                 "cpu": {

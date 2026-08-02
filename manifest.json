@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "generated_at": "2026-08-02T18:49:32.877383+00:00",
+  "version": 3,
+  "generated_at": "2026-08-02T21:49:33.006729+00:00",
   "targets": {
     "upstream-cpu": {
       "name": "llama.cpp upstream CPU baseline",
@@ -19,7 +19,24 @@
         "script": "targets/upstream-cpu/build.sh",
         "os": "ubuntu",
         "artifact": ""
-      }
+      },
+      "default_branch": "main",
+      "gpu_toolchain": "none",
+      "extra_cmake_flags": "",
+      "build_system": "cmake",
+      "binary_names": "llama-server,llama-cli",
+      "test_target": "",
+      "layer": "base",
+      "parent": null,
+      "ci_capable": true,
+      "ci_compile_capable": true,
+      "ci_test_capable": false,
+      "is_llama_cpp_fork": true,
+      "smoke_test": "",
+      "upstream_ref": null,
+      "status": "active",
+      "skip_reason": null,
+      "repos": []
     },
     "upstream-cuda": {
       "name": "llama.cpp upstream CUDA (sm_89/90a)",
@@ -39,7 +56,60 @@
         "script": "targets/upstream-cuda/build.sh",
         "os": "ubuntu",
         "artifact": ""
-      }
+      },
+      "default_branch": "main",
+      "gpu_toolchain": "none",
+      "extra_cmake_flags": "",
+      "build_system": "cmake",
+      "binary_names": "llama-server,llama-cli",
+      "test_target": "",
+      "layer": "base",
+      "parent": null,
+      "ci_capable": true,
+      "ci_compile_capable": true,
+      "ci_test_capable": false,
+      "is_llama_cpp_fork": true,
+      "smoke_test": "",
+      "upstream_ref": null,
+      "status": "active",
+      "skip_reason": null,
+      "repos": []
+    },
+    "upstream-rocm": {
+      "name": "llama.cpp upstream ROCm baseline",
+      "repo": "ggml-org/llama.cpp",
+      "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
+      "backend": "rocm",
+      "arch": "x86_64",
+      "gpu_target": null,
+      "capabilities": [
+        "chat",
+        "embed"
+      ],
+      "version": "0ab9d6f-1",
+      "build": {
+        "runner": "ubuntu-latest",
+        "script": "targets/upstream-rocm/build.sh",
+        "os": "ubuntu",
+        "artifact": ""
+      },
+      "default_branch": "main",
+      "gpu_toolchain": "none",
+      "extra_cmake_flags": "",
+      "build_system": "cmake",
+      "binary_names": "llama-server,llama-cli",
+      "test_target": "",
+      "layer": "base",
+      "parent": null,
+      "ci_capable": true,
+      "ci_compile_capable": true,
+      "ci_test_capable": false,
+      "is_llama_cpp_fork": true,
+      "smoke_test": "",
+      "upstream_ref": null,
+      "status": "active",
+      "skip_reason": null,
+      "repos": []
     },
     "upstream-vulkan": {
       "name": "llama.cpp upstream Vulkan",
@@ -58,7 +128,24 @@
         "script": "targets/upstream-vulkan/build.sh",
         "os": "ubuntu",
         "artifact": ""
-      }
+      },
+      "default_branch": "main",
+      "gpu_toolchain": "none",
+      "extra_cmake_flags": "",
+      "build_system": "cmake",
+      "binary_names": "llama-server,llama-cli",
+      "test_target": "",
+      "layer": "base",
+      "parent": null,
+      "ci_capable": true,
+      "ci_compile_capable": true,
+      "ci_test_capable": false,
+      "is_llama_cpp_fork": true,
+      "smoke_test": "",
+      "upstream_ref": null,
+      "status": "active",
+      "skip_reason": null,
+      "repos": []
     }
   }
 }

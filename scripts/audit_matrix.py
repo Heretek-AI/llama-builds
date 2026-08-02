@@ -4,6 +4,8 @@ Checks:
 1. Manifest conforms to schemas/manifest.schema.json
 2. Every manifest target has a corresponding targets/<slug>/build.sh
 3. Every targets/<slug>/build.sh with METADATA has a manifest entry
+4. Parent references point to valid targets
+5. is_llama_cpp_fork gate: warn if false but target is a build target
 """
 
 from __future__ import annotations
@@ -22,13 +24,13 @@ def audit_manifest(manifest: dict, schema: dict) -> list[str]:
 
     # Schema validation
     try:
-        import jsonschema
+        import jsonschema  # noqa: PLC0415
 
         jsonschema.validate(instance=manifest, schema=schema)
     except ImportError:
         errors.append("jsonschema not installed — skipping schema validation")
-    except jsonschema.ValidationError as e:
-        errors.append(f"Schema validation error: {e.message}")
+    except Exception as e:  # noqa: BLE001
+        errors.append(f"Schema validation error: {e}")
 
     return errors
 
@@ -37,6 +39,7 @@ def audit_targets_dir(targets_dir: Path, manifest: dict) -> list[str]:
     """Validate targets/ directory against manifest.
 
     Checks that every manifest target has a build.sh and vice versa.
+    Also validates parent references and fork gate.
     """
     import re
 
@@ -66,6 +69,64 @@ def audit_targets_dir(targets_dir: Path, manifest: dict) -> list[str]:
         errors.append(
             f"Target '{target}' has build.sh but no manifest entry (run generate_manifest)"
         )
+
+    # Validate parent references in manifest
+    errors.extend(_audit_parent_references(targets_dir, manifest))
+
+    # Check is_llama_cpp_fork gate
+    errors.extend(_audit_fork_gate(manifest))
+
+    return errors
+
+
+def _audit_parent_references(targets_dir: Path, manifest: dict) -> list[str]:
+    """Validate that parent references in manifest point to valid targets."""
+    errors: list[str] = []
+    targets = manifest.get("targets", {})
+
+    for slug, target in targets.items():
+        parent = target.get("parent")
+        if parent is None:
+            continue
+
+        if parent not in targets:
+            errors.append(
+                f"Target '{slug}' references parent '{parent}' "
+                f"which does not exist in the manifest"
+            )
+            continue
+
+        # Check for cycles
+        visited = {slug}
+        current = parent
+        while current is not None:
+            if current in visited:
+                errors.append(
+                    f"Target '{slug}' has a parent cycle through '{current}'"
+                )
+                break
+            visited.add(current)
+            current_parent = targets.get(current, {}).get("parent")
+            current = current_parent
+
+    return errors
+
+
+def _audit_fork_gate(manifest: dict) -> list[str]:
+    """Warn if a target has is_llama_cpp_fork=false but is an active build target."""
+    errors: list[str] = []
+    targets = manifest.get("targets", {})
+
+    for slug, target in targets.items():
+        if target.get("is_llama_cpp_fork") is False:
+            status = target.get("status", "active")
+            if status == "active":
+                repo = target.get("repo", "")
+                if "llama" not in repo.lower():
+                    errors.append(
+                        f"WARNING: Target '{slug}' has is_llama_cpp_fork=false "
+                        f"but repo '{repo}' does not contain 'llama'"
+                    )
 
     return errors
 
