@@ -154,6 +154,7 @@ def validate_sha(repo: str, sha: str, backend: str = "cpu") -> list[str]:
             cwd=str(repo_dir),
             capture_output=True,
             text=True,
+            check=False,
         )
         resolved_sha = result.stdout.strip() if result.returncode == 0 else sha
         print(f"Resolved SHA: {resolved_sha[:12]}")
