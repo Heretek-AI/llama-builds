@@ -56,6 +56,32 @@ jobs:
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "Generated matrix: $matrix"
 
+  # Placeholder GPU entries — disabled until self-hosted runners are provisioned.
+  # Each entry mirrors the structure expected by audit_matrix.py.
+  # Re-enable by removing the `if: false` gate once the runner pool exists.
+
+  build-gpu-placeholders:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: cuda
+            backend: cuda
+            arch: x86_64
+            disabled: true
+          - target: rocm
+            backend: rocm
+            arch: x86_64
+            disabled: true
+          - target: vulkan
+            backend: vulkan
+            arch: x86_64
+            disabled: true
+    if: ${{ !matrix.disabled }}
+    steps:
+      - run: echo "Placeholder GPU entry: ${{ matrix.target }} (disabled)"
+
   build:
     needs: discover
     if: fromJson(needs.discover.outputs.matrix).include[0]
