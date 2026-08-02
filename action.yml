@@ -87,6 +87,14 @@ runs:
         echo "resolved_sha=$FULL_SHA" >> "$GITHUB_OUTPUT"
         echo "Resolved SHA: ${FULL_SHA:0:12}"
 
+    - name: Install CUDA toolkit
+      if: inputs.backend == 'cuda'
+      uses: Jimver/cuda-toolkit@v0.2.21
+      id: cuda-toolkit
+      with:
+        method: network
+        linux-local-args: '["--toolkit"]'
+
     - name: Install dependencies
       shell: bash
       run: |
@@ -94,15 +102,6 @@ runs:
         sudo apt-get install -y -qq cmake ninja-build
 
         case "${{ inputs.backend }}" in
-          cuda)
-            echo "::group::Installing CUDA toolkit"
-            # CUDA toolkit installation — use official NVIDIA action or apt
-            wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
-            sudo dpkg -i cuda-keyring_1.1-1_all.deb
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq cuda-toolkit
-            echo "::endgroup::"
-            ;;
           rocm)
             echo "::group::Installing ROCm"
             ROCM_VERSION="${{ inputs.rocm_version }}"
@@ -200,7 +199,15 @@ runs:
             ;;
           cuda)
             echo "Collecting CUDA runtime libraries..."
-            # Copy CUDA libs if needed — most systems have them in /usr/local/cuda
+            mkdir -p "$INSTALL_DIR/lib"
+            for lib in libcublas.so* libcublaslt.so*; do
+              find /usr/local/cuda -name "$lib" -exec cp -L {} "$INSTALL_DIR/lib/" \; 2>/dev/null || true
+            done
+            if ls "$INSTALL_DIR/lib/"*.so* 1>/dev/null 2>&1; then
+              echo "CUDA libs bundled: $(ls "$INSTALL_DIR/lib/"*.so* | wc -l) files"
+            else
+              echo "::warning::No CUDA runtime libs found — binaries may require system CUDA"
+            fi
             ;;
         esac
 
