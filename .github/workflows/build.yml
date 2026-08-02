@@ -24,9 +24,9 @@ jobs:
       matrix: ${{ steps.gen.outputs.matrix }}
       target_count: ${{ steps.gen.outputs.target_count }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -49,14 +49,14 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
       - name: Checkout target repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ inputs.ref == 'latest' && matrix.ref || inputs.ref }}
@@ -181,7 +181,7 @@ jobs:
           tar czf "${{ github.workspace }}/${ARCHIVE_NAME}" ./*
           echo "archive_name=$ARCHIVE_NAME" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: llama-${{ matrix.backend }}-${{ matrix.gfx_target || matrix.arch }}
           path: _build/install/

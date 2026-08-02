@@ -15,7 +15,7 @@ jobs:
     outputs:
       new_commit: ${{ steps.check.outputs.new_commit }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 

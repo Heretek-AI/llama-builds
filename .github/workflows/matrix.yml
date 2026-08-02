@@ -15,7 +15,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       target_count: ${{ steps.set-matrix.outputs.target_count }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Discover build targets
         id: set-matrix
@@ -120,7 +120,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Read target METADATA
         id: meta
@@ -191,7 +191,7 @@ jobs:
           fi
 
       - name: Checkout target repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ steps.meta.outputs.repo }}
           ref: ${{ steps.meta.outputs.ref }}
