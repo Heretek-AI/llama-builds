@@ -14,10 +14,13 @@ CI/CD registry for llama.cpp family builds.
 - Test: `pytest`
 - Lint: `ruff check .`
 - Run: `python -m heretek_builds --help`
+- Generate manifest: `python -m scripts.generate_manifest`
+- Audit matrix: `python -m scripts.audit_matrix`
 
 ## Project structure
 ```
 llama-builds/
+├── action.yml              Composite GitHub Action for building llama.cpp forks
 ├── .github/
 │   ├── workflows/
 │   ├── ISSUE_TEMPLATE/
@@ -26,8 +29,20 @@ llama-builds/
 │   ├── skills/
 │   ├── settings.json
 │   └── hooks/
+├── targets/                Build targets (targets/*/build.sh with METADATA headers)
+│   ├── _template/          Template for new targets
+│   └── upstream-cpu/       First real target: llama.cpp CPU baseline
+├── schemas/                JSON Schema definitions (manifest.schema.json)
+├── scripts/                CI tooling
+│   ├── generate_manifest.py
+│   ├── audit_matrix.py
+│   ├── upstream_sha_tester.py
+│   └── version_tag.py      Version tag generation utility
+├── tests/                  Test suite (93 tests)
+├── docs/                   Design docs, specs, and runbooks
 ├── AGENTS.md
 ├── CLAUDE.md
+├── manifest.json           Generated build manifest (v2)
 ├── sonar-project.properties
 ├── .pre-commit-config.yaml
 └── README.md
