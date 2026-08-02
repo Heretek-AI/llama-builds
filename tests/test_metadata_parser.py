@@ -31,6 +31,44 @@ def test_parse_cpu_target(tmp_path: Path) -> None:
     assert meta["bundle_strategy"] == "cpu-static"
 
 
+def test_parse_cpu_target_empty_gpu_target(tmp_path: Path) -> None:
+    build_sh = tmp_path / "build.sh"
+    build_sh.write_text(
+        "#!/usr/bin/env bash\n"
+        "# METADATA\n"
+        "# name=llama.cpp upstream CPU baseline\n"
+        "# repo=ggml-org/llama.cpp\n"
+        "# ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48\n"
+        "# backend=cpu\n"
+        "# arch=x86_64\n"
+        "# gpu_target=\n"
+        "# capabilities=chat,embed\n"
+        "set -euo pipefail\n"
+        'echo "build"\n'
+    )
+    meta = parse_metadata(build_sh)
+    assert meta["gpu_target"] is None
+
+
+def test_parse_cuda_target_with_gpu_target(tmp_path: Path) -> None:
+    build_sh = tmp_path / "build.sh"
+    build_sh.write_text(
+        "#!/usr/bin/env bash\n"
+        "# METADATA\n"
+        "# name=llama.cpp upstream CUDA (sm_89/90a)\n"
+        "# repo=ggml-org/llama.cpp\n"
+        "# ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48\n"
+        "# backend=cuda\n"
+        "# arch=x86_64\n"
+        "# gpu_target=sm_89\n"
+        "# capabilities=chat,embed,flash-attn\n"
+        "set -euo pipefail\n"
+        'echo "build"\n'
+    )
+    meta = parse_metadata(build_sh)
+    assert meta["gpu_target"] == "sm_89"
+
+
 def test_parse_rocm_target(tmp_path: Path) -> None:
     build_sh = tmp_path / "build.sh"
     build_sh.write_text(

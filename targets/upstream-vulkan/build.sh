@@ -5,6 +5,7 @@
 # ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48
 # backend=vulkan
 # arch=x86_64
+# gpu_target=
 # capabilities=chat,embed
 set -euo pipefail
 

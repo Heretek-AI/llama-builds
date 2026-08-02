@@ -5,6 +5,7 @@
 # ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48
 # backend=cuda
 # arch=x86_64
+# gpu_target=sm_89
 # capabilities=chat,embed,flash-attn
 set -euo pipefail
 

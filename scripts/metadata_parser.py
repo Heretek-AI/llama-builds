@@ -19,6 +19,7 @@ from scripts.metadata_common import (
 DEFAULTS = {
     "arch": "x86_64",
     "capabilities": [],
+    "gpu_target": None,
     "gpu_targets": [],
     "runtime_deps": [],
     "bundle_strategy": "cpu-static",
@@ -43,6 +44,7 @@ def parse_metadata(build_sh: Path) -> dict:
     result["ref"] = typed["ref"]
     result["backend"] = typed["backend"]
     result["arch"] = typed.get("arch", DEFAULTS["arch"])
+    result["gpu_target"] = typed.get("gpu_target", DEFAULTS["gpu_target"])
     result["capabilities"] = typed.get("capabilities", DEFAULTS["capabilities"])
     result["gpu_targets"] = typed.get("gpu_targets", DEFAULTS["gpu_targets"])
     result["runtime_deps"] = typed.get("runtime_deps", DEFAULTS["runtime_deps"])
