@@ -20,7 +20,7 @@ def schema():
 @pytest.fixture
 def valid_manifest():
     return {
-        "version": 1,
+        "version": 2,
         "generated_at": "2026-08-02T00:00:00Z",
         "targets": {
             "cpu": {
@@ -29,10 +29,14 @@ def valid_manifest():
                 "ref": "abc1234def5678",
                 "backend": "cpu",
                 "arch": "x86_64",
+                "gpu_target": None,
                 "capabilities": ["chat"],
+                "version": "abc1234-1",
                 "build": {
                     "runner": "ubuntu-latest",
                     "script": "targets/cpu/build.sh",
+                    "os": "ubuntu",
+                    "artifact": "llama-abc1234-1-ubuntu-cpu-x86_64.tar.gz",
                 },
             }
         },
@@ -133,9 +137,98 @@ class TestAuditMatrix:
                     include: []
         """)
         manifest = {
-            "version": 1,
+            "version": 2,
             "generated_at": "2026-08-02T00:00:00Z",
             "targets": {},
         }
+        errors = audit_matrix(matrix_yml, manifest)
+        assert errors == []
+
+
+class TestAuditMatrixV2:
+    """Validate v2 manifest fields in matrix audit."""
+
+    def test_gpu_target_validated(self):
+        """Matrix entry with gpu_target must match manifest."""
+        manifest = {
+            "version": 2,
+            "generated_at": "2026-08-02T00:00:00Z",
+            "targets": {
+                "cuda-sm89": {
+                    "name": "CUDA sm_89",
+                    "repo": "ggml-org/llama.cpp",
+                    "ref": "abc1234def5678",
+                    "backend": "cuda",
+                    "arch": "x86_64",
+                    "gpu_target": "sm_89",
+                    "capabilities": ["chat"],
+                    "version": "abc1234-1",
+                    "build": {
+                        "runner": "ubuntu-latest",
+                        "script": "targets/cuda-sm89/build.sh",
+                        "os": "ubuntu",
+                        "artifact": "llama-abc1234-1-ubuntu-cuda-x86_64-sm_89.tar.gz",
+                    },
+                }
+            },
+        }
+        matrix_yml = textwrap.dedent("""\
+            name: Matrix Build
+            on: [push]
+            permissions:
+              contents: read
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                strategy:
+                  matrix:
+                    include:
+                      - target: cuda-sm89
+                        backend: cuda
+                        arch: x86_64
+                        gpu_target: sm_89
+        """)
+        errors = audit_matrix(matrix_yml, manifest)
+        assert errors == []
+
+    def test_version_field_not_validated(self):
+        """Version field is informational — not validated against matrix."""
+        manifest = {
+            "version": 2,
+            "generated_at": "2026-08-02T00:00:00Z",
+            "targets": {
+                "cpu": {
+                    "name": "CPU",
+                    "repo": "o/r",
+                    "ref": "abc1234def5678",
+                    "backend": "cpu",
+                    "arch": "x86_64",
+                    "gpu_target": None,
+                    "capabilities": ["chat"],
+                    "version": "abc1234-1",
+                    "build": {
+                        "runner": "ubuntu-latest",
+                        "script": "targets/cpu/build.sh",
+                        "os": "ubuntu",
+                        "artifact": "",
+                    },
+                }
+            },
+        }
+        matrix_yml = textwrap.dedent("""\
+            name: Matrix Build
+            on: [push]
+            permissions:
+              contents: read
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                strategy:
+                  matrix:
+                    include:
+                      - target: cpu
+                        backend: cpu
+                        arch: x86_64
+        """)
         errors = audit_matrix(matrix_yml, manifest)
         assert errors == []

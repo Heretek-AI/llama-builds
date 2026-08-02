@@ -182,7 +182,7 @@ def validate_sha(repo: str, sha: str, backend: str = "cpu") -> list[str]:
         capabilities = [c.strip() for c in caps_raw.split(",") if c.strip()]
 
         manifest_entry = {
-            "version": 1,
+            "version": 2,
             "generated_at": datetime.now(UTC).isoformat(),
             "targets": {
                 "test": {
@@ -191,10 +191,14 @@ def validate_sha(repo: str, sha: str, backend: str = "cpu") -> list[str]:
                     "ref": resolved_sha,
                     "backend": meta.get("backend", backend),
                     "arch": meta.get("arch", "x86_64"),
+                    "gpu_target": None,
                     "capabilities": capabilities or ["chat"],
+                    "version": f"{resolved_sha[:7]}-1",
                     "build": {
                         "runner": "ubuntu-latest",
                         "script": "targets/test/build.sh",
+                        "os": "ubuntu",
+                        "artifact": "",
                     },
                 }
             },
