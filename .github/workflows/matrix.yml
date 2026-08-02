@@ -360,26 +360,22 @@ jobs:
             macOS) OS_NAME="macos" ;;
           esac
 
-          MANIFEST_ENTRY=$(printf '{
-            "name": "%s (%s)",
-            "repo": "%s",
-            "ref": "%s",
-            "backend": "%s",
-            "arch": "%s",
-            "gpu_target": null,
-            "capabilities": ["chat"],
-            "version": "%s",
-            "build": {
-              "runner": "ubuntu-latest",
-              "script": "",
-              "os": "%s",
-              "artifact": "%s"
-            }
-          }' "${{ steps.meta.outputs.repo }}" "${{ matrix.backend }}" "${{ steps.meta.outputs.repo }}" \
-            "$FULL_SHA" "${{ matrix.backend }}" "${{ matrix.arch }}" \
-            "$VERSION_TAG" "$OS_NAME" "$ARCHIVE_NAME")
+          MANIFEST_ENTRY=$(jq -n \
+            --arg name "${{ steps.meta.outputs.repo }} (${{ matrix.backend }})" \
+            --arg repo "${{ steps.meta.outputs.repo }}" \
+            --arg ref "$FULL_SHA" \
+            --arg backend "${{ matrix.backend }}" \
+            --arg arch "${{ matrix.arch }}" \
+            --arg version "$VERSION_TAG" \
+            --arg os "$OS_NAME" \
+            --arg artifact "$ARCHIVE_NAME" \
+            '{name:$name,repo:$repo,ref:$ref,backend:$backend,arch:$arch,gpu_target:null,capabilities:["chat"],version:$version,build:{runner:"ubuntu-latest",script:"",os:$os,artifact:$artifact}}')
 
-          echo "manifest_entry=$MANIFEST_ENTRY" >> "$GITHUB_OUTPUT"
+          {
+            echo "manifest_entry<<MANIFEST_EOF"
+            echo "$MANIFEST_ENTRY"
+            echo "MANIFEST_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Cleanup
         if: always()
