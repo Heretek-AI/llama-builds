@@ -259,13 +259,13 @@ jobs:
           esac
 
           echo "CMake args: $CMAKE_ARGS"
-          cmake .. $CMAKE_ARGS -G Ninja
+          cmake .. "$CMAKE_ARGS" -G Ninja
 
       - name: Build
         shell: bash
         run: |
           cd _build/target/build
-          cmake --build . --config Release -j$(nproc)
+          cmake --build . --config Release -j"$(nproc)"
 
       - name: Collect artifacts
         id: collect
@@ -302,6 +302,7 @@ jobs:
 
           for bin in llama-*; do
             if [[ -f "$bin" && -x "$bin" ]]; then
+              # shellcheck disable=SC2016
               patchelf --set-rpath '$ORIGIN' "$bin" 2>/dev/null || true
             fi
           done
@@ -325,11 +326,13 @@ jobs:
           ARCHIVE_NAME="${ARCHIVE_NAME}.tar.gz"
 
           cd "$INSTALL_DIR"
-          tar czf "${{ github.workspace }}/${ARCHIVE_NAME}" *
+          tar czf "${{ github.workspace }}/${ARCHIVE_NAME}" ./*
 
-          echo "archive_name=$ARCHIVE_NAME" >> "$GITHUB_OUTPUT"
-          echo "archive_path=${{ github.workspace }}/${ARCHIVE_NAME}" >> "$GITHUB_OUTPUT"
-          echo "artifact_path=${{ github.workspace }}/${ARCHIVE_NAME}" >> "$GITHUB_OUTPUT"
+          {
+            echo "archive_name=$ARCHIVE_NAME"
+            echo "archive_path=${{ github.workspace }}/${ARCHIVE_NAME}"
+            echo "artifact_path=${{ github.workspace }}/${ARCHIVE_NAME}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Generate version tag
         id: version
