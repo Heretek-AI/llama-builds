@@ -12,16 +12,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_PATH = Path("schemas/manifest.schema.json")
+SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schemas" / "manifest.schema.json"
+REPO_PATTERN = re.compile(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$")
 
 
-def clone_repo(repo: str, ref: str, dest: Path) -> bool:
-    """Clone a GitHub repo at a specific ref. Returns True on success."""
+def clone_repo(repo: str, ref: str, dest: Path) -> tuple[bool, str]:
+    """Clone a GitHub repo at a specific ref.
+
+    Returns (success, stderr_message) tuple.
+    """
     url = f"https://github.com/{repo}.git"
     try:
         subprocess.run(
@@ -30,8 +36,13 @@ def clone_repo(repo: str, ref: str, dest: Path) -> bool:
             capture_output=True,
             timeout=120,
         )
-        return True
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return True, ""
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        stderr = (
+            e.stderr.decode()
+            if isinstance(e, subprocess.CalledProcessError) and e.stderr
+            else str(e)
+        )
         # Tag might not exist, try fetching by SHA
         try:
             dest.mkdir(parents=True, exist_ok=True)
@@ -55,9 +66,14 @@ def clone_repo(repo: str, ref: str, dest: Path) -> bool:
                 check=True,
                 capture_output=True,
             )
-            return True
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-            return False
+            return True, ""
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e2:
+            msg = (
+                e2.stderr.decode()
+                if isinstance(e2, subprocess.CalledProcessError) and e2.stderr
+                else str(e2)
+            )
+            return False, f"{stderr}\n{msg}" if stderr else msg
 
 
 def extract_metadata_from_repo(repo_dir: Path) -> dict | None:
@@ -78,8 +94,6 @@ def extract_metadata_from_repo(repo_dir: Path) -> dict | None:
 
 def _parse_metadata_file(path: Path) -> dict | None:
     """Parse METADATA block from a build script."""
-    import re
-
     in_metadata = False
     metadata: dict[str, str] = {}
     header = "# METADATA"
@@ -120,12 +134,18 @@ def validate_sha(repo: str, sha: str, backend: str = "cpu") -> list[str]:
     """Validate a SHA against the manifest system. Returns list of errors."""
     errors: list[str] = []
 
+    # Validate repo format
+    if not REPO_PATTERN.match(repo):
+        errors.append(f"Invalid repo format: {repo!r} (expected owner/repo)")
+        return errors
+
     with tempfile.TemporaryDirectory(prefix="upstream-test-") as tmpdir:
         repo_dir = Path(tmpdir) / "repo"
 
         print(f"Cloning {repo}@{sha}...")
-        if not clone_repo(repo, sha, repo_dir):
-            errors.append(f"Failed to clone {repo}@{sha}")
+        ok, stderr = clone_repo(repo, sha, repo_dir)
+        if not ok:
+            errors.append(f"Failed to clone {repo}@{sha}: {stderr}")
             return errors
 
         # Get the actual resolved SHA
@@ -163,7 +183,7 @@ def validate_sha(repo: str, sha: str, backend: str = "cpu") -> list[str]:
 
         manifest_entry = {
             "version": 1,
-            "generated_at": "2026-08-02T00:00:00Z",
+            "generated_at": datetime.now(UTC).isoformat(),
             "targets": {
                 "test": {
                     "name": meta.get("name", "Unknown"),
@@ -189,6 +209,8 @@ def validate_sha(repo: str, sha: str, backend: str = "cpu") -> list[str]:
                 print("Schema validation: PASSED")
             except ImportError:
                 print("jsonschema not installed — skipping schema validation")
+            except json.JSONDecodeError as e:
+                errors.append(f"Schema file is not valid JSON: {e}")
             except jsonschema.ValidationError as e:
                 errors.append(f"Schema validation failed: {e.message}")
 
