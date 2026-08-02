@@ -1,0 +1,54 @@
+# llama-builds/.github/workflows/upstream-watch.yml
+name: Watch Upstream
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # Every 6 hours
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      new_commit: ${{ steps.check.outputs.new_commit }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check for upstream changes
+        id: check
+        run: |
+          LOCAL_SHA=$(cat .last-upstream-sha 2>/dev/null || echo "")
+          UPSTREAM_SHA=$(git ls-remote https://github.com/ggml-org/llama.cpp.git HEAD | cut -f1)
+
+          echo "Local:   ${LOCAL_SHA:0:12:-none}"
+          echo "Upstream: ${UPSTREAM_SHA:0:12}"
+
+          if [ "$LOCAL_SHA" != "$UPSTREAM_SHA" ]; then
+            echo "New upstream commit detected!"
+            echo "new_commit=$UPSTREAM_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "No new upstream commits"
+          fi
+
+      - name: Update local SHA tracker
+        if: steps.check.outputs.new_commit != ''
+        run: |
+          echo "${{ steps.check.outputs.new_commit }}" > .last-upstream-sha
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .last-upstream-sha
+          git commit -m "chore: update upstream SHA to ${{ steps.check.outputs.new_commit }}"
+          git push
+
+  trigger-build:
+    needs: check-upstream
+    if: needs.check-upstream.outputs.new_commit != ''
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.check-upstream.outputs.new_commit }}
+    secrets: inherit
