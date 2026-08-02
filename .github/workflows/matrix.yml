@@ -275,7 +275,7 @@ jobs:
           INSTALL_DIR="${{ github.workspace }}/_build/install"
           mkdir -p "$INSTALL_DIR"
 
-          cd _build/target/build
+          cd _build/target/build/bin
 
           BINARIES=()
           for bin in llama-server llama-cli llama-bench llama-quantize llama-perplexity llama-benchmark; do
