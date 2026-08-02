@@ -131,7 +131,7 @@ jobs:
           esac
 
           echo "CMake args: $CMAKE_ARGS"
-          cmake -B build $CMAKE_ARGS -G Ninja
+          cmake -B build $CMAKE_ARGS
 
       - name: Build
         run: |
