@@ -254,3 +254,34 @@ class TestGenerateManifestV2:
         """Generated manifest uses schema version 2."""
         manifest = generate_manifest(targets_dir=tmp_path / "targets")
         assert manifest["version"] == 2
+
+
+class TestUpstreamCpuTarget:
+    """Validate the upstream-cpu target exists and has correct metadata."""
+
+    def test_upstream_cpu_build_sh_exists(self):
+        build_sh = Path("targets/upstream-cpu/build.sh")
+        assert build_sh.exists(), "targets/upstream-cpu/build.sh must exist"
+
+    def test_upstream_cpu_metadata(self):
+        from scripts.generate_manifest import extract_metadata
+
+        build_sh = Path("targets/upstream-cpu/build.sh")
+        meta = extract_metadata(build_sh)
+        assert meta is not None
+        assert meta["name"] == "llama.cpp upstream CPU baseline"
+        assert meta["repo"] == "ggml-org/llama.cpp"
+        assert meta["backend"] == "cpu"
+        assert meta["arch"] == "x86_64"
+        assert "chat" in meta["capabilities"]
+        assert "embed" in meta["capabilities"]
+
+    def test_upstream_cpu_in_manifest(self):
+        from scripts.generate_manifest import generate_manifest
+
+        manifest = generate_manifest(targets_dir=Path("targets"))
+        assert "upstream-cpu" in manifest["targets"]
+        target = manifest["targets"]["upstream-cpu"]
+        assert target["backend"] == "cpu"
+        assert target["gpu_target"] is None
+        assert target["version"].endswith("-1")
