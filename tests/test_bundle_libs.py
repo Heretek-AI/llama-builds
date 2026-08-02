@@ -1,5 +1,6 @@
 from pathlib import Path
-from scripts.bundle_libs import bundle_libs, BUNDLE_STRATEGIES
+
+from scripts.bundle_libs import BUNDLE_STRATEGIES, bundle_libs
 
 
 def test_cpu_static_noop(tmp_path: Path) -> None:
@@ -36,6 +37,7 @@ def test_bundle_copies_matching_files(tmp_path: Path) -> None:
 
     # Use a custom strategy with one pattern
     from scripts.bundle_libs import bundle_libs_custom
+
     bundle_libs_custom(artifact_dir, lib_dir, ["libfoo.so*"])
     copied = [f.name for f in artifact_dir.iterdir()]
     assert "libfoo.so.1" in copied

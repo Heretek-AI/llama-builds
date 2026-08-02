@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate GitHub Actions build matrix from target METADATA."""
+
 import json
 import sys
 from pathlib import Path

@@ -1,11 +1,11 @@
 """Bundle runtime libraries into build artifact directories."""
+
 from __future__ import annotations
 
 import fnmatch
 import shutil
 import subprocess
 from pathlib import Path
-
 
 BUNDLE_STRATEGIES: dict[str, dict] = {
     "cpu-static": {
@@ -108,8 +108,6 @@ def bundle_libs(artifact_dir: Path, strategy_name: str) -> None:
     _set_rpath(artifact_dir)
 
 
-def bundle_libs_custom(
-    artifact_dir: Path, source_dir: Path, patterns: list[str]
-) -> None:
+def bundle_libs_custom(artifact_dir: Path, source_dir: Path, patterns: list[str]) -> None:
     """Copy files matching patterns from source_dir into artifact_dir."""
     _copy_matching_files(source_dir, artifact_dir, patterns)

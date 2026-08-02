@@ -1,4 +1,5 @@
 """Parse METADATA headers from target build.sh files."""
+
 from __future__ import annotations
 
 import re
@@ -84,25 +85,29 @@ def generate_matrix(targets_dir: Path) -> dict:
         if meta["backend"] == "rocm" and meta["gpu_targets"]:
             for family in meta["gpu_targets"]:
                 for isa in expand_gpu_family(family):
-                    entries.append({
-                        "target": target_name,
-                        "backend": meta["backend"],
-                        "arch": meta["arch"],
-                        "gfx_target": isa,
-                        "repo": meta["repo"],
-                        "ref": meta["ref"],
-                        "bundle_strategy": meta["bundle_strategy"],
-                        "capabilities": meta["capabilities"],
-                    })
+                    entries.append(
+                        {
+                            "target": target_name,
+                            "backend": meta["backend"],
+                            "arch": meta["arch"],
+                            "gfx_target": isa,
+                            "repo": meta["repo"],
+                            "ref": meta["ref"],
+                            "bundle_strategy": meta["bundle_strategy"],
+                            "capabilities": meta["capabilities"],
+                        }
+                    )
         else:
-            entries.append({
-                "target": target_name,
-                "backend": meta["backend"],
-                "arch": meta["arch"],
-                "gfx_target": None,
-                "repo": meta["repo"],
-                "ref": meta["ref"],
-                "bundle_strategy": meta["bundle_strategy"],
-                "capabilities": meta["capabilities"],
-            })
+            entries.append(
+                {
+                    "target": target_name,
+                    "backend": meta["backend"],
+                    "arch": meta["arch"],
+                    "gfx_target": None,
+                    "repo": meta["repo"],
+                    "ref": meta["ref"],
+                    "bundle_strategy": meta["bundle_strategy"],
+                    "capabilities": meta["capabilities"],
+                }
+            )
     return {"include": entries}
