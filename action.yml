@@ -21,7 +21,7 @@ inputs:
   rocm_version:
     description: "ROCm version (e.g. 6.2.0)"
     required: false
-    default: ""
+    default: "6.2.0"
   cuda_version:
     description: "CUDA version (e.g. 12.6)"
     required: false
@@ -109,8 +109,14 @@ runs:
               echo "::error::rocm_version input is required for ROCm backend"
               exit 1
             fi
-            # Install ROCm — simplified for Phase 1 (CPU target doesn't need this)
-            echo "ROCm $ROCM_VERSION installation — to be implemented in Phase 3"
+            VERSION_NO_DOTS=$(echo "$ROCM_VERSION" | tr -d '.')
+            ROCM_URL="https://rocm.nightlies.amd.com/Linux Ubuntu/22.04/amd64/rocm-rel-${VERSION_NO_DOTS}/rocm-${ROCM_VERSION}.tar.bz2"
+            echo "Downloading ROCm from: $ROCM_URL"
+            wget -q "$ROCM_URL" -O /tmp/rocm.tar.bz2
+            sudo tar -xjf /tmp/rocm.tar.bz2 -C /opt/
+            rm /tmp/rocm.tar.bz2
+            echo "/opt/rocm-${ROCM_VERSION}/bin" >> $GITHUB_PATH
+            echo "ROCm $ROCM_VERSION installed at /opt/rocm-${ROCM_VERSION}"
             echo "::endgroup::"
             ;;
           vulkan)
@@ -195,7 +201,16 @@ runs:
         case "${{ inputs.backend }}" in
           rocm)
             echo "Collecting ROCm runtime libraries..."
-            # Copy ROCm libs — to be implemented in Phase 3
+            ROCM_VERSION="${{ inputs.rocm_version }}"
+            mkdir -p "$INSTALL_DIR/lib"
+            for lib in librocblas.so* libhipblaslt.so* libamdhip64.so*; do
+              find /opt/rocm-${ROCM_VERSION} -name "$lib" -exec cp -L {} "$INSTALL_DIR/lib/" \; 2>/dev/null || true
+            done
+            if ls "$INSTALL_DIR/lib/"*.so* 1>/dev/null 2>&1; then
+              echo "ROCm libs bundled: $(ls "$INSTALL_DIR/lib/"*.so* | wc -l) files"
+            else
+              echo "::warning::No ROCm runtime libs found — binaries may require system ROCm"
+            fi
             ;;
           cuda)
             echo "Collecting CUDA runtime libraries..."
