@@ -197,6 +197,7 @@ jobs:
           ref: ${{ steps.meta.outputs.ref }}
           path: _build/target
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Resolve full SHA
         id: resolve

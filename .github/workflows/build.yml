@@ -62,6 +62,7 @@ jobs:
           ref: ${{ inputs.ref == 'latest' && matrix.ref || inputs.ref }}
           path: _build/target
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Resolve full SHA
         id: resolve
