@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "generated_at": "2026-08-02T21:52:48.540164+00:00",
+  "generated_at": "2026-08-02T21:54:56.271306+00:00",
   "targets": {
     "ik-llama-cpp": {
       "name": "ik_llama.cpp (SOTA IQ*K quants)",

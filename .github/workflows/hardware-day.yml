@@ -1,0 +1,58 @@
+name: Hardware Day (GPU Build)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target slug to build (e.g. ik-llama-cpp-cuda)'
+        required: true
+        type: string
+      backend:
+        description: 'Backend (cuda, rocm, vulkan)'
+        required: true
+        type: choice
+        options:
+          - cuda
+          - rocm
+          - vulkan
+      cuda_arch:
+        description: 'CUDA architecture (e.g. 89 for sm_89)'
+        required: false
+        type: string
+        default: '89'
+
+permissions:
+  contents: write
+
+jobs:
+  gpu-build:
+    runs-on: ubuntu-latest
+    container: nvidia/cuda:12.6.2-devel-ubuntu24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq cmake build-essential ninja-build git libcurl4-openssl-dev libgomp1
+
+      - name: Run build
+        env:
+          REPO: ${{ github.event.inputs.target }}
+          BACKEND: ${{ github.event.inputs.backend }}
+          CUDA_ARCH: ${{ github.event.inputs.cuda_arch }}
+        run: |
+          TARGET_DIR="targets/${{ github.event.inputs.target }}"
+          if [ -f "$TARGET_DIR/build.sh" ]; then
+            bash "$TARGET_DIR/build.sh"
+          else
+            echo "ERROR: Target ${{ github.event.inputs.target }} not found"
+            exit 1
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.target }}-${{ github.event.inputs.backend }}
+          path: build/
+          retention-days: 7
