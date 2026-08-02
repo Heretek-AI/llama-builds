@@ -38,3 +38,5 @@ Thumbs.db
 .coverage
 htmlcov/
 coverage.xml
+.serena/
+matrix.json
