@@ -20,6 +20,7 @@ import argparse
 import json
 import re
 import sys
+import warnings
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -46,6 +47,8 @@ def extract_metadata(build_sh: Path) -> dict | None:
             if match:
                 key, value = match.groups()
                 metadata[key] = value.strip()
+            elif stripped == "":
+                continue  # Skip blank lines within metadata block
             elif not stripped.startswith("#"):
                 break  # End of metadata block
 
@@ -91,6 +94,12 @@ def generate_manifest(targets_dir: Path, repo_root: Path | None = None) -> dict:
 
         # Compute relative script path from repo root
         script_rel = str(build_sh.relative_to(repo_root))
+
+        if "arch" not in meta:
+            warnings.warn(
+                f"Target '{slug}' missing 'arch' in METADATA, defaulting to x86_64",
+                stacklevel=2,
+            )
 
         targets[slug] = {
             "name": meta["name"],

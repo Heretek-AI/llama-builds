@@ -76,7 +76,7 @@ class TestAuditManifest:
         errors = audit_manifest(valid_manifest, schema)
         assert len(errors) > 0, "Expected schema validation error for invalid backend"
 
-    def test_orphan_manifest_target_warning(self, valid_manifest, schema):
+    def test_orphan_manifest_target_warning(self, valid_manifest):
         """Manifest has a target not in matrix — should warn."""
         matrix_yml = textwrap.dedent("""\
             name: Matrix Build
@@ -90,8 +90,8 @@ class TestAuditManifest:
                   matrix:
                     include: []
         """)
-        errors = audit_manifest(valid_manifest, schema, matrix_yml=matrix_yml)
-        assert any("orphan" in e.lower() or "not in matrix" in e.lower() for e in errors)
+        errors = audit_matrix(matrix_yml, valid_manifest)
+        assert any("not in matrix" in e.lower() or "missing entry" in e.lower() for e in errors)
 
 
 class TestAuditMatrix:

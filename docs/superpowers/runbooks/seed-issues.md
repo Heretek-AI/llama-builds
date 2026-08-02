@@ -2,6 +2,9 @@
 
 How to invoke `seed-issues.sh`, recover from partial failures, and add new repo slugs.
 
+> **Note:** `scripts/seed-issues.sh` and `seeds/llama-builds.yaml` are planned for a
+> follow-up PR. This runbook documents the intended workflow ahead of implementation.
+
 ## Overview
 
 `seed-issues.sh` reads a YAML seed file and creates GitHub issues via the `gh` CLI.

@@ -19,7 +19,6 @@ python -m scripts.audit_matrix
 targets/          Build targets (targets/*/build.sh with METADATA headers)
 schemas/          JSON Schema definitions (manifest.schema.json)
 scripts/          CI tooling (generate_manifest.py, audit_matrix.py)
-src/              Python package (heretek_builds)
 tests/            Test suite
 docs/             Design docs, specs, and runbooks
 ```

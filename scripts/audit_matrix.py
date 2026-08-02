@@ -19,8 +19,8 @@ import yaml
 SCHEMA_PATH = Path("schemas/manifest.schema.json")
 
 
-def audit_manifest(manifest: dict, schema: dict, matrix_yml: str | None = None) -> list[str]:
-    """Validate manifest against JSON schema. Optionally cross-check with matrix."""
+def audit_manifest(manifest: dict, schema: dict) -> list[str]:
+    """Validate manifest against JSON schema."""
     errors: list[str] = []
 
     # Schema validation
@@ -32,14 +32,6 @@ def audit_manifest(manifest: dict, schema: dict, matrix_yml: str | None = None) 
         errors.append("jsonschema not installed — skipping schema validation")
     except jsonschema.ValidationError as e:
         errors.append(f"Schema validation error: {e.message}")
-
-    # Cross-check with matrix if provided
-    if matrix_yml is not None:
-        matrix_targets = _parse_matrix_targets(matrix_yml)
-        manifest_targets = set(manifest.get("targets", {}).keys())
-
-        for target in manifest_targets - matrix_targets:
-            errors.append(f"Orphan manifest target '{target}' not found in matrix.yml")
 
     return errors
 
@@ -60,7 +52,10 @@ def audit_matrix(matrix_yml: str, manifest: dict) -> list[str]:
 
 
 def _parse_matrix_targets(matrix_yml: str) -> set[str]:
-    """Extract target slugs from matrix.yml include entries."""
+    """Extract target slugs from matrix.yml include entries.
+
+    Skips entries with ``disabled: true`` (placeholder GPU entries).
+    """
     data = yaml.safe_load(matrix_yml)
     targets = set()
 
@@ -71,6 +66,8 @@ def _parse_matrix_targets(matrix_yml: str) -> set[str]:
         includes = matrix.get("include", [])
         for entry in includes:
             if isinstance(entry, dict) and "target" in entry:
+                if entry.get("disabled", False):
+                    continue
                 targets.add(entry["target"])
 
     return targets
@@ -105,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
     matrix_yml = args.matrix.read_text()
 
     errors: list[str] = []
-    errors.extend(audit_manifest(manifest, schema, matrix_yml=matrix_yml))
+    errors.extend(audit_manifest(manifest, schema))
     errors.extend(audit_matrix(matrix_yml, manifest))
 
     if errors:
