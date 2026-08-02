@@ -279,7 +279,14 @@ runs:
       run: |
         FULL_SHA="${{ steps.resolve.outputs.resolved_sha }}"
         REF_PREFIX="${FULL_SHA:0:7}"
-        VERSION_TAG="${REF_PREFIX}-1"
+
+        # Check existing releases for this ref prefix
+        BUILD_NUM=1
+        while gh release view "v${REF_PREFIX}-${BUILD_NUM}" >/dev/null 2>&1; do
+          BUILD_NUM=$((BUILD_NUM + 1))
+        done
+
+        VERSION_TAG="${REF_PREFIX}-${BUILD_NUM}"
         echo "version_tag=$VERSION_TAG" >> "$GITHUB_OUTPUT"
         echo "Version tag: $VERSION_TAG"
 
@@ -290,42 +297,37 @@ runs:
         FULL_SHA="${{ steps.resolve.outputs.resolved_sha }}"
         VERSION_TAG="${{ steps.version.outputs.version_tag }}"
         ARCHIVE_NAME="${{ steps.archive.outputs.archive_name }}"
-
-        # Determine OS
         OS_NAME="ubuntu"
-        case "${{ runner.os }}" in
-          Linux) OS_NAME="ubuntu" ;;
-          Windows) OS_NAME="windows" ;;
-          macOS) OS_NAME="macos" ;;
-        esac
 
-        # Build manifest entry JSON
-        GPU_TARGET="null"
-        if [[ -n "${{ inputs.gpu_target }}" ]]; then
-          GPU_TARGET="\"${{ inputs.gpu_target }}\""
-        fi
-
-        MANIFEST_ENTRY=$(printf '{
-          "name": "%s (%s)",
-          "repo": "%s",
-          "ref": "%s",
-          "backend": "%s",
-          "arch": "%s",
-          "gpu_target": %s,
-          "capabilities": ["chat"],
-          "version": "%s",
-          "build": {
-            "runner": "ubuntu-latest",
-            "script": "",
-            "os": "%s",
-            "artifact": "%s"
-          }
-        }' "${{ inputs.repo }}" "${{ inputs.backend }}" "${{ inputs.repo }}" \
-          "$FULL_SHA" "${{ inputs.backend }}" "${{ inputs.arch }}" "$GPU_TARGET" \
-          "$VERSION_TAG" "$OS_NAME" "$ARCHIVE_NAME")
-
-        # Write to output (escape for GitHub Actions)
-        echo "manifest_entry=$MANIFEST_ENTRY" >> "$GITHUB_OUTPUT"
+        python3 -c "
+        import json, sys
+        entry = {
+            'name': f'{sys.argv[1]} ({sys.argv[2]})',
+            'repo': sys.argv[1],
+            'ref': sys.argv[3],
+            'backend': sys.argv[2],
+            'arch': sys.argv[4],
+            'gpu_target': sys.argv[5] if sys.argv[5] else None,
+            'capabilities': sys.argv[6].split(',') if sys.argv[6] else ['chat'],
+            'version': sys.argv[7],
+            'build': {
+                'runner': 'ubuntu-latest',
+                'script': '',
+                'os': sys.argv[8],
+                'artifact': sys.argv[9]
+            },
+            'smoke_test': 'llama-cli --version',
+            'ci_capable': True,
+            'ci_compile_capable': True,
+            'ci_test_capable': False,
+            'is_llama_cpp_fork': True,
+            'status': 'active'
+        }
+        print(json.dumps(entry))
+        " "${{ inputs.repo }}" "${{ inputs.backend }}" "$FULL_SHA" \
+          "${{ inputs.arch }}" "${{ inputs.gpu_target }}" \
+          "${{ inputs.cmake_flags }}" "$VERSION_TAG" "$OS_NAME" "$ARCHIVE_NAME" \
+        >> "$GITHUB_OUTPUT"
 
     - name: Set outputs
       shell: bash
