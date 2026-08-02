@@ -26,7 +26,6 @@ llama-builds/
 │   ├── skills/
 │   ├── settings.json
 │   └── hooks/
-├── .mcp.json
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── sonar-project.properties
