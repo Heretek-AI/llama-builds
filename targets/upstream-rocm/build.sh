@@ -32,7 +32,7 @@ if [[ -z "${GITHUB_ACTIONS:-}" ]]; then
   cd "$BUILD_DIR/repo"
   mkdir -p build && cd build
   cmake .. -DCMAKE_BUILD_TYPE=Release -DGGML_HIP=ON -G Ninja
-  cmake --build . -j$(nproc)
+  cmake --build . -j"$(nproc)"
 
   echo "Build complete. Binaries in: $(pwd)"
   ls -la llama-server llama-cli 2>/dev/null || echo "Note: binary names may vary"

@@ -60,7 +60,7 @@ jobs:
             zip -r "../../${name}-${TAG}.zip" ./*
             cd ../..
           done
-          ls -la *.zip
+          ls -la ./*.zip
 
       - name: Create GitHub Release
         if: steps.check.outputs.exists == 'false'
@@ -71,4 +71,4 @@ jobs:
           gh release create "$TAG" \
             --title "$TAG" \
             --notes "Automated release from upstream llama.cpp build." \
-            *.zip
+            ./*.zip
