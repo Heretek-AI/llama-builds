@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -35,16 +36,23 @@ jobs:
       - name: Redact sensitive fields
         run: |
           # Remove any fields that shouldn't be public
-          python3 -c "
+          python -c "
           import json
-          m = json.load(open('manifest.json'))
-          # Keep only safe fields
-          safe = {'version', 'generated_at', 'targets'}
-          for t in m.get('targets', {}).values():
-              for key in list(t.keys()):
-                  if key not in {'name', 'repo', 'ref', 'backend', 'arch', 'capabilities'}:
-                      del t[key]
-          json.dump(m, open('manifest.json', 'w'), indent=2)
+          with open('manifest.json') as f:
+              m = json.load(f)
+          # Explicitly build output with only allowed top-level keys
+          redacted = {
+              'version': m.get('version'),
+              'generated_at': m.get('generated_at'),
+              'targets': {}
+          }
+          allowed_target_keys = {'name', 'repo', 'ref', 'backend', 'arch', 'capabilities'}
+          for slug, target in m.get('targets', {}).items():
+              redacted['targets'][slug] = {
+                  k: v for k, v in target.items() if k in allowed_target_keys
+              }
+          with open('manifest.json', 'w') as f:
+              json.dump(redacted, f, indent=2)
           print('Manifest redacted successfully')
           "
 
