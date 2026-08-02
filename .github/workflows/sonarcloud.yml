@@ -15,7 +15,7 @@ jobs:
         with: { fetch-depth: 0 }
       - uses: actions/setup-python@v7
         with: { python-version: "3.11" }
-      - run: pip install coverage pytest
+      - run: pip install coverage pytest pyyaml
       - run: pytest
       - name: SonarCloud scan
         uses: SonarSource/sonarqube-scan-action@v2
