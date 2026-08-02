@@ -90,7 +90,7 @@ class TestGenerateManifest:
         targets = tmp_path / "targets"
         targets.mkdir()
         manifest = generate_manifest(targets_dir=targets)
-        assert manifest["version"] == 1
+        assert manifest["version"] == 2
         assert manifest["targets"] == {}
 
     def test_single_target(self, tmp_path):
@@ -155,3 +155,102 @@ class TestGenerateManifest:
         schema = json.loads(SCHEMA_PATH.read_text())
         manifest = generate_manifest(targets_dir=tmp_path / "targets")
         jsonschema.validate(instance=manifest, schema=schema)
+
+
+class TestGenerateManifestV2:
+    """Tests for v2 manifest fields."""
+
+    def test_version_field_populated(self, tmp_path):
+        """Generated manifest includes version from build.sh METADATA."""
+        target_dir = tmp_path / "targets" / "cpu"
+        target_dir.mkdir(parents=True)
+        build_sh = target_dir / "build.sh"
+        build_sh.write_text(
+            textwrap.dedent("""\
+            #!/usr/bin/env bash
+            # METADATA
+            # name=llama.cpp CPU baseline
+            # repo=ggml-org/llama.cpp
+            # ref=abc1234def5678
+            # backend=cpu
+            # arch=x86_64
+            # capabilities=chat,embed
+            set -euo pipefail
+        """)
+        )
+        manifest = generate_manifest(targets_dir=tmp_path / "targets")
+        target = manifest["targets"]["cpu"]
+        assert "version" in target
+        assert target["version"] == "abc1234-1"
+
+    def test_gpu_target_from_metadata(self, tmp_path):
+        """gpu_target is read from METADATA if present."""
+        target_dir = tmp_path / "targets" / "cuda"
+        target_dir.mkdir(parents=True)
+        build_sh = target_dir / "build.sh"
+        build_sh.write_text(
+            textwrap.dedent("""\
+            #!/usr/bin/env bash
+            # METADATA
+            # name=llama.cpp CUDA
+            # repo=ggml-org/llama.cpp
+            # ref=abc1234def5678
+            # backend=cuda
+            # arch=x86_64
+            # gpu_target=sm_89
+            # capabilities=chat,embed
+            set -euo pipefail
+        """)
+        )
+        manifest = generate_manifest(targets_dir=tmp_path / "targets")
+        target = manifest["targets"]["cuda"]
+        assert target["gpu_target"] == "sm_89"
+
+    def test_gpu_target_null_when_missing(self, tmp_path):
+        """gpu_target is null when not in METADATA."""
+        target_dir = tmp_path / "targets" / "cpu"
+        target_dir.mkdir(parents=True)
+        build_sh = target_dir / "build.sh"
+        build_sh.write_text(
+            textwrap.dedent("""\
+            #!/usr/bin/env bash
+            # METADATA
+            # name=llama.cpp CPU
+            # repo=ggml-org/llama.cpp
+            # ref=abc1234def5678
+            # backend=cpu
+            # arch=x86_64
+            # capabilities=chat
+            set -euo pipefail
+        """)
+        )
+        manifest = generate_manifest(targets_dir=tmp_path / "targets")
+        target = manifest["targets"]["cpu"]
+        assert target["gpu_target"] is None
+
+    def test_build_os_default_ubuntu(self, tmp_path):
+        """build.os defaults to ubuntu."""
+        target_dir = tmp_path / "targets" / "cpu"
+        target_dir.mkdir(parents=True)
+        build_sh = target_dir / "build.sh"
+        build_sh.write_text(
+            textwrap.dedent("""\
+            #!/usr/bin/env bash
+            # METADATA
+            # name=Test
+            # repo=o/r
+            # ref=abc1234
+            # backend=cpu
+            # arch=x86_64
+            # capabilities=chat
+            set -euo pipefail
+        """)
+        )
+        manifest = generate_manifest(targets_dir=tmp_path / "targets")
+        target = manifest["targets"]["cpu"]
+        assert target["build"]["os"] == "ubuntu"
+
+    def test_manifest_schema_version_2(self, tmp_path):
+        """Generated manifest uses schema version 2."""
+        manifest = generate_manifest(targets_dir=tmp_path / "targets")
+        assert manifest["version"] == 2

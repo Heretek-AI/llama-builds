@@ -71,7 +71,7 @@ def generate_manifest(targets_dir: Path, repo_root: Path | None = None) -> dict:
 
     if not targets_dir.is_dir():
         return {
-            "version": 1,
+            "version": 2,
             "generated_at": datetime.now(UTC).isoformat(),
             "targets": targets,
         }
@@ -101,21 +101,29 @@ def generate_manifest(targets_dir: Path, repo_root: Path | None = None) -> dict:
                 stacklevel=2,
             )
 
+        # Generate version tag from ref
+        ref = meta.get("ref", "")
+        version_tag = f"{ref[:7]}-1" if len(ref) >= 7 else ""
+
         targets[slug] = {
             "name": meta["name"],
             "repo": meta["repo"],
-            "ref": meta["ref"],
+            "ref": ref,
             "backend": meta["backend"],
             "arch": meta.get("arch", "x86_64"),
+            "gpu_target": meta.get("gpu_target") or None,
             "capabilities": meta["capabilities"],
+            "version": version_tag,
             "build": {
                 "runner": _runner_for_backend(meta["backend"]),
                 "script": script_rel,
+                "os": "ubuntu",
+                "artifact": "",  # Populated at build time, not manifest gen time
             },
         }
 
     return {
-        "version": 1,
+        "version": 2,
         "generated_at": datetime.now(UTC).isoformat(),
         "targets": targets,
     }
