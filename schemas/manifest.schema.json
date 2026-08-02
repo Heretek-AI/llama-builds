@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://heretek-ai.github.io/llama-builds/schemas/manifest.schema.json",
   "title": "llama-builds manifest",
-  "description": "Schema for the build manifest emitted by generate_manifest.py. Versioning: bump `version` const when adding/removing fields. Downstream consumers (heretek-manager) must handle unknown fields gracefully.",
+  "description": "Schema for the build manifest. Versioning: bump `version` const when adding/removing fields.",
   "x-versioning": "The `version` field is an integer const. When the schema changes, increment this value. Semver does not apply — use increment-only.",
   "type": "object",
   "required": ["version", "generated_at", "targets"],
@@ -10,7 +10,7 @@
   "properties": {
     "version": {
       "type": "integer",
-      "const": 1,
+      "const": 2,
       "description": "Manifest schema version"
     },
     "generated_at": {
@@ -60,12 +60,21 @@
           "enum": ["x86_64", "aarch64"],
           "description": "Target architecture"
         },
+        "gpu_target": {
+          "type": ["string", "null"],
+          "description": "GPU ISA family (e.g. gfx1151, sm_89). Null for CPU builds."
+        },
         "capabilities": {
           "type": "array",
           "items": { "type": "string" },
           "minItems": 1,
           "uniqueItems": true,
           "description": "List of capability tags (e.g. chat, embed, trellis)"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7}-\\d+$",
+          "description": "Build version tag (e.g. abc1234-1)"
         },
         "build": {
           "type": "object",
@@ -79,6 +88,14 @@
             "script": {
               "type": "string",
               "description": "Relative path to build.sh within the target directory"
+            },
+            "os": {
+              "type": "string",
+              "description": "Operating system used for the build (e.g. ubuntu, windows)"
+            },
+            "artifact": {
+              "type": "string",
+              "description": "Filename of the archived build artifact"
             }
           }
         }
