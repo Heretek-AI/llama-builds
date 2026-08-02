@@ -20,97 +20,41 @@ jobs:
       - name: Discover build targets
         id: set-matrix
         run: |
-          # Glob targets/*/build.sh and parse METADATA from each
-          # Skip directories starting with _ (e.g. _template)
-          targets=()
-          for build_script in targets/*/build.sh; do
-            if [ -f "$build_script" ]; then
-              target=$(basename "$(dirname "$build_script")")
-              if [[ "$target" == _* ]]; then
-                echo "Skipping template target: $target"
-                continue
-              fi
-              targets+=("$target")
-            fi
-          done
-
-          target_count=${#targets[@]}
-          echo "target_count=$target_count" >> "$GITHUB_OUTPUT"
-
-          if [ "$target_count" -eq 0 ]; then
-            echo "No targets found in targets/*/build.sh"
-            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "Found $target_count target(s): ${targets[*]}"
-
-          # Build JSON matrix with METADATA from each build.sh
-          matrix='{"include":['
-          first=true
-          for target in "${targets[@]}"; do
-            build_script="targets/$target/build.sh"
-            if [ ! -f "$build_script" ]; then
-              continue
-            fi
-
-            # Parse METADATA block: extract backend, arch, capabilities
-            backend=""
-            arch=""
-            capabilities=""
-            in_metadata=false
-            while IFS= read -r line; do
-              if [[ "$line" == "# METADATA" ]]; then
-                in_metadata=true
-                continue
-              fi
-              if [[ "$in_metadata" == true && "$line" =~ ^#\ ([^=]+)=(.+)$ ]]; then
-                key="${BASH_REMATCH[1]}"
-                val="${BASH_REMATCH[2]}"
-                case "$key" in
-                  backend) backend="$val" ;;
-                  arch) arch="$val" ;;
-                  capabilities) capabilities="$val" ;;
-                esac
-              elif [[ "$in_metadata" == true && ! "$line" =~ ^#\  ]]; then
-                # End of METADATA block
-                in_metadata=false
-                break
-              fi
-            done < "$build_script"
-
-            # Default arch to x86_64 if not specified
-            [ -z "$arch" ] && arch="x86_64"
-
-            # Convert capabilities CSV to JSON array
-            if [ -n "$capabilities" ]; then
-              caps_json="["
-              IFS=',' read -ra cap_list <<< "$capabilities"
-              cap_first=true
-              for cap in "${cap_list[@]}"; do
-                if [ "$cap_first" = true ]; then
-                  cap_first=false
-                else
-                  caps_json+=","
-                fi
-                caps_json+="\"$(echo "$cap" | xargs)\""
-              done
-              caps_json+="]"
-            else
-              caps_json="[]"
-            fi
-
-            if [ "$first" = true ]; then
-              first=false
-            else
-              matrix+=','
-            fi
-            matrix+="{\"target\":\"$target\",\"backend\":\"$backend\",\"arch\":\"$arch\",\"capabilities\":$caps_json}"
-          done
-          matrix+=']}'
-
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-          echo "Generated matrix: $matrix"
+          python3 -c "
+          import json, re, os
+          targets = []
+          for d in sorted(os.listdir('targets')):
+              if d.startswith('_') or not os.path.isdir(f'targets/{d}'):
+                  continue
+              build_sh = f'targets/{d}/build.sh'
+              if not os.path.exists(build_sh):
+                  continue
+              meta = {}
+              in_metadata = False
+              with open(build_sh) as f:
+                  for line in f:
+                      if line.startswith('# METADATA'):
+                          in_metadata = True
+                          continue
+                      if in_metadata:
+                          match = re.match(r'^#\s+(\w+)=(.*)', line.strip())
+                          if match:
+                              meta[match.group(1)] = match.group(2)
+                          elif not line.startswith('# '):
+                              break
+              if 'repo' in meta and 'ref' in meta and 'backend' in meta:
+                  targets.append({
+                      'target': d,
+                      'repo': meta['repo'],
+                      'ref': meta['ref'],
+                      'backend': meta['backend'],
+                      'arch': meta.get('arch', 'x86_64'),
+                      'gpu_target': meta.get('gpu_target', ''),
+                      'name': meta.get('name', d),
+                      'smoke_test': meta.get('smoke_test', 'llama-cli --version')
+                  })
+          print(json.dumps({'include': targets}))
+          " >> "$GITHUB_OUTPUT"
 
   build:
     needs: discover
@@ -122,263 +66,40 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Read target METADATA
-        id: meta
-        run: |
-          build_script="targets/${{ matrix.target }}/build.sh"
-          repo=""
-          ref=""
-
-          if [ -f "$build_script" ]; then
-            in_metadata=false
-            while IFS= read -r line; do
-              if [[ "$line" == "# METADATA" ]]; then
-                in_metadata=true
-                continue
-              fi
-              if [[ "$in_metadata" == true && "$line" =~ ^#\ ([^=]+)=(.+)$ ]]; then
-                key="${BASH_REMATCH[1]}"
-                val="${BASH_REMATCH[2]}"
-                case "$key" in
-                  repo) repo="$val" ;;
-                  ref) ref="$val" ;;
-                esac
-              elif [[ "$in_metadata" == true && ! "$line" =~ ^#\  ]]; then
-                break
-              fi
-            done < "$build_script"
-          fi
-
-          if [ -z "$repo" ]; then
-            echo "::error::No repo found in METADATA for ${{ matrix.target }}"
-            exit 1
-          fi
-          if [ -z "$ref" ]; then
-            echo "::error::No ref found in METADATA for ${{ matrix.target }}"
-            exit 1
-          fi
-
-          echo "repo=$repo" >> "$GITHUB_OUTPUT"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
-          echo "repo=$repo ref=$ref"
-
-      - name: Validate inputs
-        shell: bash
-        env:
-          REPO: ${{ steps.meta.outputs.repo }}
-          REF: ${{ steps.meta.outputs.ref }}
-          BACKEND: ${{ matrix.backend }}
-        run: |
-          # Validate backend is one of the allowed values
-          case "$BACKEND" in
-            cpu|cuda|rocm|vulkan) ;;
-            *)
-              echo "::error::Invalid backend: $BACKEND (expected cpu, cuda, rocm, or vulkan)"
-              exit 1
-              ;;
-          esac
-
-          # Validate repo format (owner/repo)
-          if [[ ! "$REPO" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
-            echo "::error::Invalid repo format: $REPO (expected owner/repo)"
-            exit 1
-          fi
-
-          # Validate ref is at least 7 chars
-          if [[ "${#REF}" -lt 7 ]]; then
-            echo "::error::Ref must be at least 7 characters: $REF"
-            exit 1
-          fi
-
-      - name: Checkout target repo
-        uses: actions/checkout@v7
+      - name: Build ${{ matrix.target }}
+        uses: ./action.yml
+        id: build
         with:
-          repository: ${{ steps.meta.outputs.repo }}
-          ref: ${{ steps.meta.outputs.ref }}
-          path: _build/target
-          fetch-depth: 1
-          persist-credentials: false
+          repo: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+          backend: ${{ matrix.backend }}
+          arch: ${{ matrix.arch }}
+          gpu_target: ${{ matrix.gpu_target }}
 
-      - name: Resolve full SHA
-        id: resolve
-        shell: bash
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llama-${{ matrix.target }}
+          path: ${{ steps.build.outputs.artifact_path }}
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    if: always() && needs.build.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: _artifacts
+      - name: Collect and validate manifest
         run: |
-          cd _build/target
-          FULL_SHA=$(git rev-parse HEAD)
-          echo "resolved_sha=$FULL_SHA" >> "$GITHUB_OUTPUT"
-          echo "Resolved SHA: ${FULL_SHA:0:12}"
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq cmake ninja-build
-
-          case "${{ matrix.backend }}" in
-            cuda)
-              echo "::group::Installing CUDA toolkit"
-              wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
-              sudo dpkg -i cuda-keyring_1.1-1_all.deb
-              sudo apt-get update -qq
-              sudo apt-get install -y -qq cuda-toolkit
-              echo "::endgroup::"
-              ;;
-            rocm)
-              echo "::group::Installing ROCm"
-              echo "ROCm installation — to be implemented in Phase 3"
-              echo "::endgroup::"
-              ;;
-            vulkan)
-              echo "::group::Installing Vulkan SDK"
-              sudo apt-get install -y -qq libvulkan-dev vulkan-validationlayers
-              echo "::endgroup::"
-              ;;
-            cpu)
-              echo "No extra dependencies needed for CPU backend"
-              ;;
-          esac
-
-      - name: CMake configure
-        shell: bash
-        run: |
-          cd _build/target
-          mkdir -p build && cd build
-
-          CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release"
-          CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/_build/install"
-
-          case "${{ matrix.backend }}" in
-            cuda)
-              CMAKE_ARGS="$CMAKE_ARGS -DGGML_CUDA=ON"
-              ;;
-            rocm)
-              CMAKE_ARGS="$CMAKE_ARGS -DGGML_HIP=ON"
-              ;;
-            vulkan)
-              CMAKE_ARGS="$CMAKE_ARGS -DGGML_VULKAN=ON"
-              ;;
-          esac
-
-          echo "CMake args: $CMAKE_ARGS"
-          cmake .. "$CMAKE_ARGS"
-
-      - name: Build
-        shell: bash
-        run: |
-          cd _build/target/build
-          cmake --build . --config Release -j"$(nproc)"
-
-      - name: Collect artifacts
-        id: collect
-        shell: bash
-        run: |
-          INSTALL_DIR="${{ github.workspace }}/_build/install"
-          mkdir -p "$INSTALL_DIR"
-
-          cd _build/target/build/bin
-
-          BINARIES=()
-          for bin in llama-server llama-cli llama-bench llama-quantize llama-perplexity llama-benchmark; do
-            if [[ -f "$bin" ]]; then
-              BINARIES+=("$bin")
-            fi
-          done
-
-          if [[ ${#BINARIES[@]} -eq 0 ]]; then
-            echo "::error::No binaries found after build"
+          echo "Artifacts downloaded:"
+          find _artifacts -name "*.tar.gz" -type f
+          ARTIFACT_COUNT=$(find _artifacts -name "*.tar.gz" -type f | wc -l)
+          echo "Total artifacts: $ARTIFACT_COUNT"
+          if [ "$ARTIFACT_COUNT" -eq 0 ]; then
+            echo "::error::No artifacts found"
             exit 1
           fi
-
-          echo "Found binaries: ${BINARIES[*]}"
-          cp "${BINARIES[@]}" "$INSTALL_DIR/"
-
-          echo "install_dir=$INSTALL_DIR" >> "$GITHUB_OUTPUT"
-
-      - name: Set RPATH
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          INSTALL_DIR="${{ steps.collect.outputs.install_dir }}"
-          cd "$INSTALL_DIR"
-
-          for bin in llama-*; do
-            if [[ -f "$bin" && -x "$bin" ]]; then
-              # shellcheck disable=SC2016
-              patchelf --set-rpath '$ORIGIN' "$bin" 2>/dev/null || true
-            fi
-          done
-
-      - name: Archive artifacts
-        id: archive
-        shell: bash
-        run: |
-          INSTALL_DIR="${{ steps.collect.outputs.install_dir }}"
-          FULL_SHA="${{ steps.resolve.outputs.resolved_sha }}"
-          REF_PREFIX="${FULL_SHA:0:7}"
-
-          OS_NAME="ubuntu"
-          case "${{ runner.os }}" in
-            Linux) OS_NAME="ubuntu" ;;
-            Windows) OS_NAME="windows" ;;
-            macOS) OS_NAME="macos" ;;
-          esac
-
-          ARCHIVE_NAME="llama-${REF_PREFIX}-1-${OS_NAME}-${{ matrix.backend }}-${{ matrix.arch }}"
-          ARCHIVE_NAME="${ARCHIVE_NAME}.tar.gz"
-
-          cd "$INSTALL_DIR"
-          tar czf "${{ github.workspace }}/${ARCHIVE_NAME}" ./*
-
-          {
-            echo "archive_name=$ARCHIVE_NAME"
-            echo "archive_path=${{ github.workspace }}/${ARCHIVE_NAME}"
-            echo "artifact_path=${{ github.workspace }}/${ARCHIVE_NAME}"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Generate version tag
-        id: version
-        shell: bash
-        run: |
-          FULL_SHA="${{ steps.resolve.outputs.resolved_sha }}"
-          REF_PREFIX="${FULL_SHA:0:7}"
-          VERSION_TAG="${REF_PREFIX}-1"
-          echo "version_tag=$VERSION_TAG" >> "$GITHUB_OUTPUT"
-          echo "Version tag: $VERSION_TAG"
-
-      - name: Emit manifest entry
-        id: manifest
-        shell: bash
-        run: |
-          FULL_SHA="${{ steps.resolve.outputs.resolved_sha }}"
-          VERSION_TAG="${{ steps.version.outputs.version_tag }}"
-          ARCHIVE_NAME="${{ steps.archive.outputs.archive_name }}"
-
-          OS_NAME="ubuntu"
-          case "${{ runner.os }}" in
-            Linux) OS_NAME="ubuntu" ;;
-            Windows) OS_NAME="windows" ;;
-            macOS) OS_NAME="macos" ;;
-          esac
-
-          MANIFEST_ENTRY=$(jq -n \
-            --arg name "${{ steps.meta.outputs.repo }} (${{ matrix.backend }})" \
-            --arg repo "${{ steps.meta.outputs.repo }}" \
-            --arg ref "$FULL_SHA" \
-            --arg backend "${{ matrix.backend }}" \
-            --arg arch "${{ matrix.arch }}" \
-            --arg version "$VERSION_TAG" \
-            --arg os "$OS_NAME" \
-            --arg artifact "$ARCHIVE_NAME" \
-            '{name:$name,repo:$repo,ref:$ref,backend:$backend,arch:$arch,gpu_target:null,capabilities:["chat"],version:$version,build:{runner:"ubuntu-latest",script:"",os:$os,artifact:$artifact}}')
-
-          {
-            echo "manifest_entry<<MANIFEST_EOF"
-            echo "$MANIFEST_ENTRY"
-            echo "MANIFEST_EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Cleanup
-        if: always()
-        shell: bash
-        run: |
-          rm -rf _build
