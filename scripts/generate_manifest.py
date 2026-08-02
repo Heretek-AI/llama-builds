@@ -133,8 +133,8 @@ def _runner_for_backend(backend: str) -> str:
     """Map backend to a GitHub Actions runner label."""
     runners = {
         "cpu": "ubuntu-latest",
-        "cuda": "self-hosted",
-        "rocm": "self-hosted",
+        "cuda": "ubuntu-latest",
+        "rocm": "ubuntu-latest",
         "vulkan": "ubuntu-latest",
         "docs": "ubuntu-latest",
     }

@@ -15,12 +15,12 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       target_count: ${{ steps.set-matrix.outputs.target_count }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Discover build targets
         id: set-matrix
         run: |
-          # Glob targets/*/build.sh and build a JSON matrix
+          # Glob targets/*/build.sh and parse METADATA from each
           targets=()
           for build_script in targets/*/build.sh; do
             if [ -f "$build_script" ]; then
@@ -40,47 +40,72 @@ jobs:
 
           echo "Found $target_count target(s): ${targets[*]}"
 
-          # Build JSON matrix with include entries
+          # Build JSON matrix with METADATA from each build.sh
           matrix='{"include":['
           first=true
           for target in "${targets[@]}"; do
+            build_script="targets/$target/build.sh"
+            if [ ! -f "$build_script" ]; then
+              continue
+            fi
+
+            # Parse METADATA block: extract backend, arch, capabilities
+            backend=""
+            arch=""
+            capabilities=""
+            in_metadata=false
+            while IFS= read -r line; do
+              if [[ "$line" == "# METADATA" ]]; then
+                in_metadata=true
+                continue
+              fi
+              if [[ "$in_metadata" == true && "$line" =~ ^#\ ([^=]+)=(.+)$ ]]; then
+                key="${BASH_REMATCH[1]}"
+                val="${BASH_REMATCH[2]}"
+                case "$key" in
+                  backend) backend="$val" ;;
+                  arch) arch="$val" ;;
+                  capabilities) capabilities="$val" ;;
+                esac
+              elif [[ "$in_metadata" == true && ! "$line" =~ ^#\  ]]; then
+                # End of METADATA block
+                in_metadata=false
+                break
+              fi
+            done < "$build_script"
+
+            # Default arch to x86_64 if not specified
+            [ -z "$arch" ] && arch="x86_64"
+
+            # Convert capabilities CSV to JSON array
+            if [ -n "$capabilities" ]; then
+              caps_json="["
+              IFS=',' read -ra cap_list <<< "$capabilities"
+              cap_first=true
+              for cap in "${cap_list[@]}"; do
+                if [ "$cap_first" = true ]; then
+                  cap_first=false
+                else
+                  caps_json+=","
+                fi
+                caps_json+="\"$(echo "$cap" | xargs)\""
+              done
+              caps_json+="]"
+            else
+              caps_json="[]"
+            fi
+
             if [ "$first" = true ]; then
               first=false
             else
               matrix+=','
             fi
-            matrix+="{\"target\":\"$target\",\"backend\":\"$target\",\"arch\":\"x86_64\"}"
+            matrix+="{\"target\":\"$target\",\"backend\":\"$backend\",\"arch\":\"$arch\",\"capabilities\":$caps_json}"
           done
           matrix+=']}'
 
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "Generated matrix: $matrix"
-
-  # Placeholder GPU entries — disabled until self-hosted runners are provisioned.
-  # Each entry mirrors the structure expected by audit_matrix.py.
-  # Re-enable by removing the `if: false` gate once the runner pool exists.
-
-  build-gpu-placeholders:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: cuda
-            backend: cuda
-            arch: x86_64
-            disabled: true
-          - target: rocm
-            backend: rocm
-            arch: x86_64
-            disabled: true
-          - target: vulkan
-            backend: vulkan
-            arch: x86_64
-            disabled: true
-    if: ${{ !matrix.disabled }}
-    steps:
-      - run: echo "Placeholder GPU entry: ${{ matrix.target }} (disabled)"
 
   build:
     needs: discover
@@ -90,12 +115,52 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
     steps:
-      - name: Print matrix info
+      - uses: actions/checkout@v4
+
+      - name: Read target METADATA
+        id: meta
         run: |
-          echo "Target:   ${{ matrix.target }}"
-          echo "Backend:  ${{ matrix.backend }}"
-          echo "Arch:     ${{ matrix.arch }}"
-          echo ""
-          echo "Skeleton only — no build steps yet."
-          echo "Real builds will be added when targets/*/build.sh"
-          echo "contains actual build logic."
+          build_script="targets/${{ matrix.target }}/build.sh"
+          repo=""
+          ref=""
+
+          if [ -f "$build_script" ]; then
+            in_metadata=false
+            while IFS= read -r line; do
+              if [[ "$line" == "# METADATA" ]]; then
+                in_metadata=true
+                continue
+              fi
+              if [[ "$in_metadata" == true && "$line" =~ ^#\ ([^=]+)=(.+)$ ]]; then
+                key="${BASH_REMATCH[1]}"
+                val="${BASH_REMATCH[2]}"
+                case "$key" in
+                  repo) repo="$val" ;;
+                  ref) ref="$val" ;;
+                esac
+              elif [[ "$in_metadata" == true && ! "$line" =~ ^#\  ]]; then
+                break
+              fi
+            done < "$build_script"
+          fi
+
+          if [ -z "$repo" ]; then
+            echo "::error::No repo found in METADATA for ${{ matrix.target }}"
+            exit 1
+          fi
+          if [ -z "$ref" ]; then
+            echo "::error::No ref found in METADATA for ${{ matrix.target }}"
+            exit 1
+          fi
+
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "repo=$repo ref=$ref"
+
+      - name: Build ${{ matrix.target }}
+        uses: ./action.yml
+        with:
+          repo: ${{ steps.meta.outputs.repo }}
+          ref: ${{ steps.meta.outputs.ref }}
+          backend: ${{ matrix.backend }}
+          arch: ${{ matrix.arch }}

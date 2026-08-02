@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generated_at": "2026-08-02T15:36:24.474319+00:00",
+  "generated_at": "2026-08-02T17:32:47.936131+00:00",
   "targets": {
     "upstream-cpu": {
       "name": "llama.cpp upstream CPU baseline",
@@ -17,6 +17,45 @@
       "build": {
         "runner": "ubuntu-latest",
         "script": "targets/upstream-cpu/build.sh",
+        "os": "ubuntu",
+        "artifact": ""
+      }
+    },
+    "upstream-cuda": {
+      "name": "llama.cpp upstream CUDA (sm_89/90a)",
+      "repo": "ggml-org/llama.cpp",
+      "ref": "5d3a7b0e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c",
+      "backend": "cuda",
+      "arch": "x86_64",
+      "gpu_target": null,
+      "capabilities": [
+        "chat",
+        "embed",
+        "flash-attn"
+      ],
+      "version": "5d3a7b0-1",
+      "build": {
+        "runner": "ubuntu-latest",
+        "script": "targets/upstream-cuda/build.sh",
+        "os": "ubuntu",
+        "artifact": ""
+      }
+    },
+    "upstream-vulkan": {
+      "name": "llama.cpp upstream Vulkan",
+      "repo": "ggml-org/llama.cpp",
+      "ref": "5d3a7b0e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c",
+      "backend": "vulkan",
+      "arch": "x86_64",
+      "gpu_target": null,
+      "capabilities": [
+        "chat",
+        "embed"
+      ],
+      "version": "5d3a7b0-1",
+      "build": {
+        "runner": "ubuntu-latest",
+        "script": "targets/upstream-vulkan/build.sh",
         "os": "ubuntu",
         "artifact": ""
       }
