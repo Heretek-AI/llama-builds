@@ -124,13 +124,15 @@ jobs:
           mkdir -p build && cd build
 
           CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release"
+          CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/_build/install"
           case "${{ matrix.backend }}" in
             cuda)   CMAKE_ARGS="$CMAKE_ARGS -DGGML_CUDA=ON" ;;
             rocm)   CMAKE_ARGS="$CMAKE_ARGS -DGGML_HIP=ON -DGPU_TARGETS=${{ matrix.gfx_target || 'gfx1100' }}" ;;
             vulkan) CMAKE_ARGS="$CMAKE_ARGS -DGGML_VULKAN=ON" ;;
           esac
 
-          cmake .. $CMAKE_ARGS -G Ninja
+          echo "CMake args: $CMAKE_ARGS"
+          cmake .. "$CMAKE_ARGS" -G Ninja
 
       - name: Build
         run: |
