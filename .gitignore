@@ -27,6 +27,8 @@ Thumbs.db
 .omc/
 .omc-workspace
 .omo/
+.mcp.json
+.heretek-harness.json
 
 # Environment files
 .env
