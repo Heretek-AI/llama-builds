@@ -21,10 +21,15 @@ jobs:
         id: set-matrix
         run: |
           # Glob targets/*/build.sh and parse METADATA from each
+          # Skip directories starting with _ (e.g. _template)
           targets=()
           for build_script in targets/*/build.sh; do
             if [ -f "$build_script" ]; then
               target=$(basename "$(dirname "$build_script")")
+              if [[ "$target" == _* ]]; then
+                echo "Skipping template target: $target"
+                continue
+              fi
               targets+=("$target")
             fi
           done

@@ -2,7 +2,7 @@
 # METADATA
 # name=llama.cpp upstream CUDA (sm_89/90a)
 # repo=ggml-org/llama.cpp
-# ref=5d3a7b0e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c
+# ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48
 # backend=cuda
 # arch=x86_64
 # capabilities=chat,embed,flash-attn
