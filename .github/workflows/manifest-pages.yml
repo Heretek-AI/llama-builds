@@ -1,0 +1,74 @@
+name: Manifest Pages Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-python@v7
+        with: { python-version: "3.11" }
+
+      - run: pip install jsonschema pyyaml
+
+      - name: Generate manifest
+        run: python -m scripts.generate_manifest --output manifest.json
+
+      - name: Validate manifest against schema
+        run: python -m scripts.audit_matrix --manifest manifest.json --schema schemas/manifest.schema.json
+
+      - name: Redact sensitive fields
+        run: |
+          # Remove any fields that shouldn't be public
+          python -c "
+          import json
+          with open('manifest.json') as f:
+              m = json.load(f)
+          # Explicitly build output with only allowed top-level keys
+          redacted = {
+              'version': m.get('version'),
+              'generated_at': m.get('generated_at'),
+              'targets': {}
+          }
+          allowed_target_keys = {'name', 'repo', 'ref', 'backend', 'arch', 'capabilities'}
+          for slug, target in m.get('targets', {}).items():
+              redacted['targets'][slug] = {
+                  k: v for k, v in target.items() if k in allowed_target_keys
+              }
+          with open('manifest.json', 'w') as f:
+              json.dump(redacted, f, indent=2)
+          print('Manifest redacted successfully')
+          "
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: manifest.json
+          name: manifest
+
+  deploy:
+    needs: build-manifest
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
