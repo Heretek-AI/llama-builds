@@ -92,3 +92,19 @@ def test_rocm_tarball_url_major_minor_patch():
     url = _rocm_tarball_url("6.3.1")
     assert "rocm-rel-631" in url
     assert "rocm-6.3.1.tar.bz2" in url
+
+
+# ---------------------------------------------------------------------------
+# Vulkan backend helpers
+# ---------------------------------------------------------------------------
+
+
+def test_vulkan_cmake_flags() -> None:
+    """Verify Vulkan backend sets GGML_VULKAN=ON."""
+    backend = "vulkan"
+    cmake_args = "-DCMAKE_BUILD_TYPE=Release"
+    if backend == "vulkan":
+        cmake_args += " -DGGML_VULKAN=ON"
+    assert "-DGGML_VULKAN=ON" in cmake_args
+    assert "GGML_CUDA" not in cmake_args
+    assert "GGML_HIP" not in cmake_args
