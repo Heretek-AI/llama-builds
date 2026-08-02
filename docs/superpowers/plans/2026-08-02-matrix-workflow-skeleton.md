@@ -22,9 +22,11 @@
 ### Task 1: Create the matrix workflow
 
 **Files:**
+
 - Create: `.github/workflows/matrix.yml`
 
 **Interfaces:**
+
 - Consumes: nothing (first task)
 - Produces: `.github/workflows/matrix.yml` with two jobs: `discover` and `build`
 
@@ -91,23 +93,23 @@ jobs:
 Append the build job to the same file:
 
 ```yaml
-  build:
-    needs: discover
-    if: fromJson(needs.discover.outputs.matrix).include[0]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
-    steps:
-      - name: Print matrix info
-        run: |
-          echo "Target:   ${{ matrix.target }}"
-          echo "Backend:  ${{ matrix.backend }}"
-          echo "Arch:     ${{ matrix.arch }}"
-          echo ""
-          echo "Skeleton only — no build steps yet."
-          echo "Real builds will be added when targets/*/build.sh"
-          echo "contains actual build logic."
+build:
+  needs: discover
+  if: fromJson(needs.discover.outputs.matrix).include[0]
+  runs-on: ubuntu-latest
+  strategy:
+    fail-fast: false
+    matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+  steps:
+    - name: Print matrix info
+      run: |
+        echo "Target:   ${{ matrix.target }}"
+        echo "Backend:  ${{ matrix.backend }}"
+        echo "Arch:     ${{ matrix.arch }}"
+        echo ""
+        echo "Skeleton only — no build steps yet."
+        echo "Real builds will be added when targets/*/build.sh"
+        echo "contains actual build logic."
 ```
 
 - [ ] **Step 3: Validate the YAML parses cleanly**
@@ -141,9 +143,11 @@ Closes #1"
 ### Task 2: Verify the workflow with an empty targets directory
 
 **Files:**
+
 - None created or modified (verification only)
 
 **Interfaces:**
+
 - Consumes: `.github/workflows/matrix.yml` from Task 1
 - Produces: confidence that empty-matrix edge case works
 
@@ -155,16 +159,19 @@ Expected: "targets/ does not exist (expected)"
 - [ ] **Step 2: Simulate the discover job's matrix output locally**
 
 Run:
+
 ```bash
 matrix='{"include":[]}'
 echo "Matrix: $matrix"
 echo "Include count: $(echo "$matrix" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['include']))")"
 ```
+
 Expected: Include count: 0
 
 - [ ] **Step 3: Verify the if: guard expression evaluates correctly**
 
 Run:
+
 ```bash
 python3 -c "
 import json
@@ -177,4 +184,5 @@ except IndexError:
     print('Guard evaluates to empty/false — job will skip (correct)')
 "
 ```
+
 Expected: "Guard evaluates to empty/false — job will skip (correct)"

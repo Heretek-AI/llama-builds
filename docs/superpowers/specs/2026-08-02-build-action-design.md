@@ -76,17 +76,17 @@ A composite GitHub Action that handles any CMake-based llama.cpp fork.
 
 **Inputs:**
 
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `repo` | yes | — | GitHub `owner/repo` to build |
-| `ref` | yes | — | Git SHA, tag, or branch |
-| `backend` | yes | — | `cpu`, `cuda`, `rocm`, `vulkan` |
-| `arch` | no | `x86_64` | Target architecture |
-| `gpu_target` | no | — | GPU ISA family (e.g. `gfx1151`, `sm_89`) |
-| `rocm_version` | no | — | ROCm version (e.g. `6.2.0`) |
-| `cuda_version` | no | — | CUDA version (e.g. `12.6`) |
-| `cmake_flags` | no | — | Extra CMake flags (space-separated) |
-| `build_type` | no | `Release` | CMake build type |
+| Input          | Required | Default   | Description                              |
+| -------------- | -------- | --------- | ---------------------------------------- |
+| `repo`         | yes      | —         | GitHub `owner/repo` to build             |
+| `ref`          | yes      | —         | Git SHA, tag, or branch                  |
+| `backend`      | yes      | —         | `cpu`, `cuda`, `rocm`, `vulkan`          |
+| `arch`         | no       | `x86_64`  | Target architecture                      |
+| `gpu_target`   | no       | —         | GPU ISA family (e.g. `gfx1151`, `sm_89`) |
+| `rocm_version` | no       | —         | ROCm version (e.g. `6.2.0`)              |
+| `cuda_version` | no       | —         | CUDA version (e.g. `12.6`)               |
+| `cmake_flags`  | no       | —         | Extra CMake flags (space-separated)      |
+| `build_type`   | no       | `Release` | CMake build type                         |
 
 **Steps:**
 
@@ -111,21 +111,21 @@ A composite GitHub Action that handles any CMake-based llama.cpp fork.
 
 **Outputs:**
 
-| Output | Description |
-|--------|-------------|
-| `artifact_path` | Path to the archived build |
+| Output           | Description                                           |
+| ---------------- | ----------------------------------------------------- |
+| `artifact_path`  | Path to the archived build                            |
 | `manifest_entry` | JSON string — single target entry for manifest schema |
-| `resolved_sha` | Full SHA of the built ref |
-| `version_tag` | Generated version tag (e.g. `abc1234-1`) |
+| `resolved_sha`   | Full SHA of the built ref                             |
+| `version_tag`    | Generated version tag (e.g. `abc1234-1`)              |
 
 **Backend-specific build flags:**
 
-| Backend | CMake Flags | Dependencies |
-|---------|-------------|--------------|
-| `cpu` | (none — defaults) | None |
-| `cuda` | `-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES={sm_*}` | CUDA toolkit |
-| `rocm` | `-DGGML_HIP=ON -DGGML_HIP_NARCH=1 -DKOMPILE_VERSION={gfx}` | ROCm tarball |
-| `vulkan` | `-DGGML_VULKAN=ON` | Vulkan SDK |
+| Backend  | CMake Flags                                                | Dependencies |
+| -------- | ---------------------------------------------------------- | ------------ |
+| `cpu`    | (none — defaults)                                          | None         |
+| `cuda`   | `-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES={sm_*}`         | CUDA toolkit |
+| `rocm`   | `-DGGML_HIP=ON -DGGML_HIP_NARCH=1 -DKOMPILE_VERSION={gfx}` | ROCm tarball |
+| `vulkan` | `-DGGML_VULKAN=ON`                                         | Vulkan SDK   |
 
 ### Tier 2: Adapters
 
@@ -134,23 +134,25 @@ output to the same artifact contract.
 
 **Planned adapters:**
 
-| Adapter | Issues | Build System | Output |
-|---------|--------|--------------|--------|
-| `build-llama-python` | #22, #23 | cibuildwheel / pip | Wheel files |
-| `build-llama-oci` | #31 | podman / buildah | OCI image tarball |
-| `build-llama-wasm` | #32 | wasm-pack | .wasm file |
-| `build-llama-docs` | #34 | Static site gen | Markdown/HTML |
-| `build-llama-bindings` | #24–#27 | Varied | Language-specific artifacts |
+| Adapter                | Issues   | Build System       | Output                      |
+| ---------------------- | -------- | ------------------ | --------------------------- |
+| `build-llama-python`   | #22, #23 | cibuildwheel / pip | Wheel files                 |
+| `build-llama-oci`      | #31      | podman / buildah   | OCI image tarball           |
+| `build-llama-wasm`     | #32      | wasm-pack          | .wasm file                  |
+| `build-llama-docs`     | #34      | Static site gen    | Markdown/HTML               |
+| `build-llama-bindings` | #24–#27  | Varied             | Language-specific artifacts |
 
 **Adapter contract:**
 
 Each adapter must:
+
 1. Accept `repo` and `ref` inputs (same as core action).
 2. Accept adapter-specific inputs (e.g. `python_versions` for Python).
 3. Output `artifact_path`, `manifest_entry`, `resolved_sha`, `version_tag`.
 4. Use the same version tag format: `{upstream_ref_prefix}-{build_number}`.
 
 **Non-adapter targets** (issues where the build is too unique to generalize):
+
 - #30 paddler, #29 llama-swap, #28 LlamaFactory — full applications, not
   llama.cpp builds. Their `build.sh` scripts handle everything directly.
 
@@ -165,6 +167,7 @@ llama-{version}-{os}-{backend}-{arch}[-{gpu_target}].tar.gz
 ```
 
 Examples:
+
 - `llama-abc1234-1-ubuntu-cpu-x86_64.tar.gz`
 - `llama-abc1234-1-ubuntu-rocm-x86_64-gfx1151.tar.gz`
 - `llama-abc1234-1-ubuntu-cuda-x86_64-sm_89.tar.gz`
@@ -217,6 +220,7 @@ Extends the existing `schemas/manifest.schema.json` with new fields:
 ```
 
 New fields (added to schema, not breaking existing entries):
+
 - `version` (string) — The build version tag.
 - `gpu_target` (string or null) — GPU ISA family.
 - `build.os` (string) — Operating system used for the build.

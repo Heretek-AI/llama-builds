@@ -37,7 +37,7 @@ The `build-llama` composite action builds any CMake-based llama.cpp fork:
   with:
     repo: ggml-org/llama.cpp
     ref: ${{ github.sha }}
-    backend: cpu  # cpu, cuda, rocm, vulkan
+    backend: cpu # cpu, cuda, rocm, vulkan
 ```
 
 **Inputs:** `repo`, `ref`, `backend`, `arch`, `gpu_target`, `rocm_version`, `cuda_version`, `cmake_flags`, `build_type`

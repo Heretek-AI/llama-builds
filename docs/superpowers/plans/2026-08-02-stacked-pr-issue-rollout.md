@@ -8,21 +8,22 @@
 
 ## 0. Repository state snapshot (must reconcile before PR1)
 
-| Item | State | Action |
-|---|---|---|
-| `feat/ci-matrix-workflow` | 1 commit ahead of `main` (`9c7fe77` docs) | Land into `main` first (separate cleanup PR) |
-| `scripts/lib/cli` | Referenced by `init-harness.sh`, absent | Vendor or stub before PR1 ships |
-| `schemas/manifest.schema.json` | Referenced by codegen skill, absent | Land in PR1 |
-| `scripts/generate_manifest.py`, `scripts/audit_matrix.py` | Referenced, absent | Land in PR1 |
-| `targets/`, `src/`, `tests/` | Absent | Scaffold empty + gitkeep in PR1 |
-| `sonarcloud.yml` action pins (`@v4`/`@v5`) | Out of step with `@v7` elsewhere | Migrate in its own micro-PR **before** PR1 |
-| Working tree | `.mcp.json` deleted, `.omc/`, `.docs/`, `.omc/` untracked | Commit `.mcp.json` deletion; gitignore `.omc/`, `.omo/`; add `docs/` |
+| Item                                                      | State                                                     | Action                                                               |
+| --------------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------- |
+| `feat/ci-matrix-workflow`                                 | 1 commit ahead of `main` (`9c7fe77` docs)                 | Land into `main` first (separate cleanup PR)                         |
+| `scripts/lib/cli`                                         | Referenced by `init-harness.sh`, absent                   | Vendor or stub before PR1 ships                                      |
+| `schemas/manifest.schema.json`                            | Referenced by codegen skill, absent                       | Land in PR1                                                          |
+| `scripts/generate_manifest.py`, `scripts/audit_matrix.py` | Referenced, absent                                        | Land in PR1                                                          |
+| `targets/`, `src/`, `tests/`                              | Absent                                                    | Scaffold empty + gitkeep in PR1                                      |
+| `sonarcloud.yml` action pins (`@v4`/`@v5`)                | Out of step with `@v7` elsewhere                          | Migrate in its own micro-PR **before** PR1                           |
+| Working tree                                              | `.mcp.json` deleted, `.omc/`, `.docs/`, `.omc/` untracked | Commit `.mcp.json` deletion; gitignore `.omc/`, `.omo/`; add `docs/` |
 
 ---
 
 ## 1. PR stacking — full order with rationale
 
 ### Micro-PR 0: `chore/ci/sonarcloud-action-bump`
+
 **Issue:** none (housekeeping) · **Risk:** low
 **Why:** sonarcloud.yml still on `@v4`/`@v5`; mixing with feature work conflates risk.
 **Commits:** 1 atomic commit `ci: bump sonarcloud actions to v7`.
@@ -31,6 +32,7 @@
 ---
 
 ### Micro-PR 0.5: `chore/repo/state-cleanup`
+
 **Issue:** none · **Risk:** low
 **Why:** Working-tree dirt blocks clean stacked-PR diffs.
 **Commits:** 2 atomic — `chore: remove stale .mcp.json` + `chore: track docs/ and scaffold scripts/tests/src/targets/schemas directories`.
@@ -39,11 +41,13 @@
 ---
 
 ### PR 1: `feat/ci/manifest-foundation` (THE FOUNDATION)
+
 **Issues closed:** `#3 #2 #5 #6 #35 #36` · **Risk:** medium-high (touches CI + skills + docs)
 **Blocks:** PR2, PR3, PR4, PR5, all package PRs (P6+).
 **Branch off:** `main` after M0/M0.5 merged.
 
 **Atomic commits (TDD order):**
+
 1. `test(schemas): add manifest.schema.json with golden fixture` — red.
 2. `feat(schemas): manifest.schema.json (JSON Schema draft 2020-12)` — green; validates repo, target, backend, arch, build, manifest fields.
 3. `test(scripts): unit tests for generate_manifest.py scraping targets/*/build.sh` — red.
@@ -58,6 +62,7 @@
 **Risks:** schema mismatch with future targets; matrix.yml discover job may mis-detect empty dirs. **Mitigation:** first `targets/cpu/build.sh` is gitkeep + header comment so discover produces a single empty entry.
 
 **Acceptance criteria:**
+
 - `pytest` runs and passes (`tests/` non-empty).
 - `pre-commit run --all-files` green.
 - `super-linter` green.
@@ -71,11 +76,13 @@
 ---
 
 ### PR 2: `feat/build/upstream-baseline` (validates foundation)
+
 **Issues closed:** `#7 #8 #9` · **Risk:** medium
 **Blocks:** PR3+ (proves the pipeline). **Can run in parallel with:** PR4 (manifest publish), PR5 (build fixtures).
 **Why second:** first PR to drive the matrix from "disabled" to "exercised". Validates the whole toolchain end-to-end before any fan-out.
 
 **Atomic commits:**
+
 1. `test(templates): snapshot test for upstream target header + build.sh contract`.
 2. `feat(targets/cpu): upstream llama.cpp CPU baseline build.sh (#7)`.
 3. `feat(targets/cuda): upstream llama.cpp CUDA sm_89/90a build.sh (#8)`.
@@ -84,6 +91,7 @@
 6. `test(integration): end-to-end matrix discover→build→manifest on PR runner`.
 
 **Acceptance:**
+
 - 3 matrix entries enabled, run on `ubuntu-latest` (CPU), self-hosted CUDA runner (CUDA), `ubuntu-latest` (Vulkan).
 - Generated `manifest.json` lists all three with real SHAs.
 - `audit_matrix.py` exits 0.
@@ -93,10 +101,12 @@
 ---
 
 ### PR 3: `feat/ci/manifest-pages-publish`
+
 **Issue closed:** `#4` · **Risk:** low · **Blocks:** none (independent).
 **Why early:** zero code-conflict risk; validates Pages deploy pattern ahead of artifact volume.
 
 **Atomic commits:**
+
 1. `test(workflow): workflow_run manifest-publish dry-run emits artifact`.
 2. `feat(workflow): .github/workflows/manifest-pages.yml with upload-pages-artifact + deploy-pages`.
 3. `chore(docs): Pages publish runbook`.
@@ -106,9 +116,11 @@
 ---
 
 ### PR 4: `chore/build/cpu-fixtures`
+
 **Issue closed:** none · **Risk:** low · **Why:** seed-target fixtures so package PRs have a contract example.
 
 **Commits:**
+
 1. `feat(templates): targets/_template/build.sh` — header comment contract.
 2. `test(scripts): header-parser tolerates missing optional fields`.
 
@@ -117,9 +129,11 @@
 ---
 
 ### PR 5: `feat/tools/upstream-sha-tester`
+
 **Issue closed:** none · **Risk:** low · **Why:** closes the loop on `heretek-upstream-sync` skill (calls audit_matrix).
 
 **Commits:**
+
 1. `feat(scripts): upstream_sha_tester.py drives audit_matrix.py`.
 2. `test(scripts): tester rejects non-pinned SHAs`.
 
@@ -132,49 +146,54 @@
 Each package gets its own PR following the same template. Labels: `type/feature`, `area/build`, `status/ready` (or `status/deferred-hardware`).
 
 ### Group A — Upstream variants (parallel, independent)
-| PR | Issue | Target | Atomic commits |
-|---|---|---|---|
-| P6 | #10 (drop dep on #11) | `ikawrakow/ik_llama.cpp` | Trellis+FlashMLA tested in CI smoke (no sglang dep) |
-| P7 | #11 | `sgl-project/sglang` | FlashInfer+Triton install |
-| P8 | #12 | `fewtarius/CachyLLama` | SSD-backed KV cache test |
-| P9 | #13 | `croll83/llama.cpp-dgx` | DFlash+NVFP4 |
+
+| PR  | Issue                 | Target                   | Atomic commits                                      |
+| --- | --------------------- | ------------------------ | --------------------------------------------------- |
+| P6  | #10 (drop dep on #11) | `ikawrakow/ik_llama.cpp` | Trellis+FlashMLA tested in CI smoke (no sglang dep) |
+| P7  | #11                   | `sgl-project/sglang`     | FlashInfer+Triton install                           |
+| P8  | #12                   | `fewtarius/CachyLLama`   | SSD-backed KV cache test                            |
+| P9  | #13                   | `croll83/llama.cpp-dgx`  | DFlash+NVFP4                                        |
 
 ### Group B — Quantization (parallel, independent)
-| PR | Issue | Target | Notes |
-|---|---|---|---|
-| P10 | #14 | lemonade-sdk/llamacpp-rocm | **HARDWARE-DEFERRED**: needs Strix Halo ROCm runner |
-| P11 | #15 | TheTom/llama-cpp-turboquant | WHT+TCQ |
-| P12 | #16 | AtomicBot-ai/atomic-llama-cpp-turboquant | fork packaging |
-| P13 | #17 | spiritbuun/buun-llama-cpp | |
-| P14 | #18 | huawei-csl/KVarN | Hadamard+variance normalization |
-| P15 | #19 | carlosfundora/llama.cpp-1-bit-turbo | **HARDWARE-DEFERRED**: RDNA2 gfx1030 |
-| P16 | #20 | artalis-io/bitnet.c | 1-bit/ternary |
-| P17 | #21 | NVIDIA-Merlin/HierarchicalKV | |
+
+| PR  | Issue | Target                                   | Notes                                               |
+| --- | ----- | ---------------------------------------- | --------------------------------------------------- |
+| P10 | #14   | lemonade-sdk/llamacpp-rocm               | **HARDWARE-DEFERRED**: needs Strix Halo ROCm runner |
+| P11 | #15   | TheTom/llama-cpp-turboquant              | WHT+TCQ                                             |
+| P12 | #16   | AtomicBot-ai/atomic-llama-cpp-turboquant | fork packaging                                      |
+| P13 | #17   | spiritbuun/buun-llama-cpp                |                                                     |
+| P14 | #18   | huawei-csl/KVarN                         | Hadamard+variance normalization                     |
+| P15 | #19   | carlosfundora/llama.cpp-1-bit-turbo      | **HARDWARE-DEFERRED**: RDNA2 gfx1030                |
+| P16 | #20   | artalis-io/bitnet.c                      | 1-bit/ternary                                       |
+| P17 | #21   | NVIDIA-Merlin/HierarchicalKV             |                                                     |
 
 ### Group C — Bindings (parallel, independent)
-| PR | Issue | Target | Notes |
-|---|---|---|---|
-| P18 | #22 (drop dep on #11) | abetlen/llama-cpp-python | cibuildwheel manylinux+musllinux |
-| P19 | #23 | shakfu/cyllama | Cython |
-| P20a | #24a | go-skynet/go-llama.cpp | sibling PR (split from #24) |
-| P20b | #24b | gotzmann/llama.go | sibling PR (split from #24) |
-| P20c | #24c | hybridgroup/yzma | sibling PR (split from #24) |
-| P21 | #25 | SciSharp/LLamaSharp | .NET |
-| P22 | #26 | Cypheros-de/Delphi11LlamaCppBindings | Delphi |
-| P23 | #27 | mgonzs13/llama_ros | ROS 2 Humble/Iron |
+
+| PR   | Issue                 | Target                               | Notes                            |
+| ---- | --------------------- | ------------------------------------ | -------------------------------- |
+| P18  | #22 (drop dep on #11) | abetlen/llama-cpp-python             | cibuildwheel manylinux+musllinux |
+| P19  | #23                   | shakfu/cyllama                       | Cython                           |
+| P20a | #24a                  | go-skynet/go-llama.cpp               | sibling PR (split from #24)      |
+| P20b | #24b                  | gotzmann/llama.go                    | sibling PR (split from #24)      |
+| P20c | #24c                  | hybridgroup/yzma                     | sibling PR (split from #24)      |
+| P21  | #25                   | SciSharp/LLamaSharp                  | .NET                             |
+| P22  | #26                   | Cypheros-de/Delphi11LlamaCppBindings | Delphi                           |
+| P23  | #27                   | mgonzs13/llama_ros                   | ROS 2 Humble/Iron                |
 
 ### Group D — Frontends (parallel, independent)
-| PR | Issue | Target |
-|---|---|---|
-| P24 | #28 | hiyouga/LlamaFactory UI |
-| P25 | #29 | mostlygeek/llama-swap |
-| P26 | #30 | intentee/paddler |
-| P27 | #31 | containers/ramalama OCI runtime |
-| P28 | #32 | onicai/llama_cpp_canister (Wasm) |
-| P29 | #33 | Lychee-Technology/llama-cpp-for-strix-halo — **HARDWARE-DEFERRED**: TTM unlock |
-| P30 | #34 | GetNyrex/strix-halo-guide docs automation |
+
+| PR  | Issue | Target                                                                         |
+| --- | ----- | ------------------------------------------------------------------------------ |
+| P24 | #28   | hiyouga/LlamaFactory UI                                                        |
+| P25 | #29   | mostlygeek/llama-swap                                                          |
+| P26 | #30   | intentee/paddler                                                               |
+| P27 | #31   | containers/ramalama OCI runtime                                                |
+| P28 | #32   | onicai/llama_cpp_canister (Wasm)                                               |
+| P29 | #33   | Lychee-Technology/llama-cpp-for-strix-halo — **HARDWARE-DEFERRED**: TTM unlock |
+| P30 | #34   | GetNyrex/strix-halo-guide docs automation                                      |
 
 **Common package-PR commit template (5 commits, all required):**
+
 1. `test(targets): snapshot test for new target's manifest entry` — red.
 2. `feat(targets/<name>): build.sh with full header contract`.
 3. `feat(manifest): regenerate with new entry`.
@@ -201,27 +220,27 @@ M0 (sonar bump) ──► M0.5 (cleanup) ──► PR1 (foundation) ──► PR
 
 ## 4. Risk register (per PR)
 
-| PR | Top risk | Mitigation |
-|---|---|---|
-| M0 | sonar action upgrade silently breaks scan | Re-run baseline scan before/after |
-| M0.5 | gitignore mistakes commit `.omc/` | `git check-ignore` before add; exclude harness state explicitly |
-| PR1 | schema under-spec'd → future targets break | Add `additionalProperties: false`; require new schema version bump |
-| PR1 | matrix.yml discover job mis-fires on empty dirs | Add gitkeep + `_disabled` marker convention |
-| PR2 | CUDA self-hosted runner unavailable | Gate with `runs-on: [self-hosted, cuda]` + soft-fail annotation |
-| PR3 | Pages artifact contains secret metadata | Pre-upload redaction step; allowlist of fields |
-| P6, P22 | Suspect seed-deps on #11 cause confusion | Drop dep in PR body; comment on #10 + #22 |
-| P10, P15, P29 | No hardware in CI | `status/deferred-hardware` label + standalone tracking issue |
-| P20 | Three packages in one PR (size) | Split into three sibling PRs |
+| PR            | Top risk                                        | Mitigation                                                         |
+| ------------- | ----------------------------------------------- | ------------------------------------------------------------------ |
+| M0            | sonar action upgrade silently breaks scan       | Re-run baseline scan before/after                                  |
+| M0.5          | gitignore mistakes commit `.omc/`               | `git check-ignore` before add; exclude harness state explicitly    |
+| PR1           | schema under-spec'd → future targets break      | Add `additionalProperties: false`; require new schema version bump |
+| PR1           | matrix.yml discover job mis-fires on empty dirs | Add gitkeep + `_disabled` marker convention                        |
+| PR2           | CUDA self-hosted runner unavailable             | Gate with `runs-on: [self-hosted, cuda]` + soft-fail annotation    |
+| PR3           | Pages artifact contains secret metadata         | Pre-upload redaction step; allowlist of fields                     |
+| P6, P22       | Suspect seed-deps on #11 cause confusion        | Drop dep in PR body; comment on #10 + #22                          |
+| P10, P15, P29 | No hardware in CI                               | `status/deferred-hardware` label + standalone tracking issue       |
+| P20           | Three packages in one PR (size)                 | Split into three sibling PRs                                       |
 
 ---
 
 ## 5. Hardware deferral list (label `status/deferred-hardware`)
 
-| Issue | Target | Why deferred | Follow-up |
-|---|---|---|---|
-| #14 | lemonade-sdk/llamacpp-rocm (Strix Halo ROCm) | Strix Halo / gfx1151 not in CI runner pool | Open tracking issue: provision self-hosted Strix Halo runner via ARC |
-| #19 | carlosfundora/llama.cpp-1-bit-turbo (RDNA2 gfx1030) | RDNA2 not in CI runner pool | Same ARC tracking issue; partition by accelerator label |
-| #33 | Lychee-Technology/llama-cpp-for-strix-halo (TTM unlock) | Requires Strix Halo + TTM hardware path | Same ARC tracking issue |
+| Issue | Target                                                  | Why deferred                               | Follow-up                                                            |
+| ----- | ------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------- |
+| #14   | lemonade-sdk/llamacpp-rocm (Strix Halo ROCm)            | Strix Halo / gfx1151 not in CI runner pool | Open tracking issue: provision self-hosted Strix Halo runner via ARC |
+| #19   | carlosfundora/llama.cpp-1-bit-turbo (RDNA2 gfx1030)     | RDNA2 not in CI runner pool                | Same ARC tracking issue; partition by accelerator label              |
+| #33   | Lychee-Technology/llama-cpp-for-strix-halo (TTM unlock) | Requires Strix Halo + TTM hardware path    | Same ARC tracking issue                                              |
 
 **Label convention:** `status/deferred-hardware` + `ci/needs-self-hosted-runner`. Deferral PRs contain the `build.sh` and manifest entry but the matrix entry is gated with `if: false` until the runner pool is provisioned.
 
@@ -230,6 +249,7 @@ M0 (sonar bump) ──► M0.5 (cleanup) ──► PR1 (foundation) ──► PR
 ## 6. Acceptance criteria — global
 
 Every PR in the stack must independently satisfy all of:
+
 1. `pre-commit run --all-files` → exit 0
 2. `ruff check .` + `ruff format --check .` → exit 0
 3. `pytest` → exit 0, coverage delta ≥ 0 (no regression)
@@ -248,6 +268,7 @@ Every PR in the stack must independently satisfy all of:
 ## 7. Atomic-commit strategy (universal)
 
 Each PR's diff is decomposed into ≤10 commits, each commit:
+
 - Is independently `git checkout`-able on top of its parent (CI green between commits when feasible — at minimum the final commit is green).
 - Touches a single concern (schema, script, target, workflow, docs).
 - Has a Conventional Commit subject ≤72 chars.
@@ -260,16 +281,16 @@ Test-before-feature rule (TDD): applied to every Python module under `heretek_bu
 
 ## 8. TDD application matrix
 
-| Surface | Test layer | First test commit lives in |
-|---|---|---|
-| `schemas/manifest.schema.json` | JSON Schema fixture tests | PR1 |
-| `scripts/generate_manifest.py` | pytest unit (header parsing, error paths) | PR1 |
-| `scripts/audit_matrix.py` | pytest unit + golden fixtures | PR1 |
-| `scripts/upstream_sha_tester.py` | pytest unit | PR5 |
-| `targets/<name>/build.sh` | snapshot test on generated manifest entry | each P-PR |
-| `.github/workflows/*.yml` | `actionlint` + workflow_run dry-run | PR1, PR3 |
-| Bindings (`llama-cpp-python` etc.) | packaging smoke test (wheel build) | P18-P23 |
-| Hardware-deferred entries | `pytest -k '<name>_disabled' returns skip` | P10/P15/P29 |
+| Surface                            | Test layer                                 | First test commit lives in |
+| ---------------------------------- | ------------------------------------------ | -------------------------- |
+| `schemas/manifest.schema.json`     | JSON Schema fixture tests                  | PR1                        |
+| `scripts/generate_manifest.py`     | pytest unit (header parsing, error paths)  | PR1                        |
+| `scripts/audit_matrix.py`          | pytest unit + golden fixtures              | PR1                        |
+| `scripts/upstream_sha_tester.py`   | pytest unit                                | PR5                        |
+| `targets/<name>/build.sh`          | snapshot test on generated manifest entry  | each P-PR                  |
+| `.github/workflows/*.yml`          | `actionlint` + workflow_run dry-run        | PR1, PR3                   |
+| Bindings (`llama-cpp-python` etc.) | packaging smoke test (wheel build)         | P18-P23                    |
+| Hardware-deferred entries          | `pytest -k '<name>_disabled' returns skip` | P10/P15/P29                |
 
 ---
 
@@ -294,14 +315,14 @@ Open one chore PR adding these labels before PR1 lands.
 
 ## 11. Rollout timeline (target)
 
-| Day | Activity |
-|---|---|
-| 0 | M0 + M0.5 merged |
-| 1 | PR1 opened, reviews, merged |
-| 2 | PR3, PR4, PR5 opened (parallel) |
-| 3 | PR2 opened (depends on PR3 for Pages) |
-| 4-5 | P6..P30 opened as drafts; reviewers assigned in waves of 5 |
-| 6+ | Self-hosted runner provisioning kicks off (parallel track for #14/#19/#33) |
+| Day | Activity                                                                   |
+| --- | -------------------------------------------------------------------------- |
+| 0   | M0 + M0.5 merged                                                           |
+| 1   | PR1 opened, reviews, merged                                                |
+| 2   | PR3, PR4, PR5 opened (parallel)                                            |
+| 3   | PR2 opened (depends on PR3 for Pages)                                      |
+| 4-5 | P6..P30 opened as drafts; reviewers assigned in waves of 5                 |
+| 6+  | Self-hosted runner provisioning kicks off (parallel track for #14/#19/#33) |
 
 ---
 
@@ -315,12 +336,12 @@ Open one chore PR adding these labels before PR1 lands.
 
 ## 13. Summary counts
 
-| Category | Count | Notes |
-|---|---|---|
-| Micro-PRs (housekeeping) | 2 | M0, M0.5 |
-| Foundation PR | 1 | PR1 (closes 6 issues) |
-| Validation PRs | 2 | PR2, PR3 |
-| Fixture/tool PRs | 2 | PR4, PR5 |
-| Package PRs (parallel) | 27 | P6–P30 (P20 split into 3 siblings) |
-| Hardware-deferred | 3 | P10, P15, P29 |
-| **Total PRs** | **34** | (35 issues → 34 PRs after merges + #24 split into 3) |
+| Category                 | Count  | Notes                                                |
+| ------------------------ | ------ | ---------------------------------------------------- |
+| Micro-PRs (housekeeping) | 2      | M0, M0.5                                             |
+| Foundation PR            | 1      | PR1 (closes 6 issues)                                |
+| Validation PRs           | 2      | PR2, PR3                                             |
+| Fixture/tool PRs         | 2      | PR4, PR5                                             |
+| Package PRs (parallel)   | 27     | P6–P30 (P20 split into 3 siblings)                   |
+| Hardware-deferred        | 3      | P10, P15, P29                                        |
+| **Total PRs**            | **34** | (35 issues → 34 PRs after merges + #24 split into 3) |

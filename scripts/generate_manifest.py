@@ -24,8 +24,8 @@ import warnings
 from datetime import UTC, datetime
 from pathlib import Path
 
-METADATA_HEADER = "# METADATA"
-METADATA_PATTERN = re.compile(r"^#\s+(\w+)=(.+)$")
+from scripts.metadata_common import MetadataParseError, parse_metadata_raw
+
 TARGETS_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 
@@ -33,33 +33,85 @@ def extract_metadata(build_sh: Path) -> dict | None:
     """Extract METADATA block from a build.sh file.
 
     Returns None if no METADATA header is found.
+
+    This is a backward-compatible wrapper around parse_metadata_raw
+    from metadata_common. Returns capabilities as a list (v2 shape).
     """
-    in_metadata = False
-    metadata: dict[str, str] = {}
-
-    for line in build_sh.read_text().splitlines():
-        stripped = line.strip()
-        if stripped == METADATA_HEADER:
-            in_metadata = True
-            continue
-        if in_metadata:
-            match = METADATA_PATTERN.match(stripped)
-            if match:
-                key, value = match.groups()
-                metadata[key] = value.strip()
-            elif stripped == "":
-                continue  # Skip blank lines within metadata block
-            elif not stripped.startswith("#"):
-                break  # End of metadata block
-
-    if not metadata or "name" not in metadata:
+    try:
+        raw = parse_metadata_raw(build_sh)
+    except MetadataParseError:
         return None
 
     # Parse capabilities from comma-separated string
-    caps_raw = metadata.get("capabilities", "")
-    metadata["capabilities"] = [c.strip() for c in caps_raw.split(",") if c.strip()]
+    caps_raw = raw.get("capabilities", "")
+    capabilities = [c.strip() for c in caps_raw.split(",") if c.strip()]
 
-    return metadata
+    result = {k: v for k, v in raw.items() if k != "capabilities"}
+    result["capabilities"] = capabilities
+    return result
+
+
+def _parse_new_fields(raw: dict[str, str]) -> dict:
+    """Populate v3 fields from raw METADATA strings with defaults.
+
+    Returns a dict of v3 fields with proper defaults applied.
+    """
+    return {
+        "default_branch": raw.get("default_branch", "main"),
+        "gpu_toolchain": raw.get("gpu_toolchain", "none"),
+        "extra_cmake_flags": raw.get("extra_cmake_flags", ""),
+        "build_system": raw.get("build_system", "cmake"),
+        "binary_names": raw.get("binary_names", "llama-server,llama-cli"),
+        "test_target": raw.get("test_target", ""),
+        "layer": raw.get("layer", "base"),
+        "parent": raw.get("parent") or None,
+        "ci_capable": _parse_bool(raw.get("ci_capable", "true")),
+        "ci_compile_capable": _parse_bool(raw.get("ci_compile_capable", "true")),
+        "ci_test_capable": _parse_bool(raw.get("ci_test_capable", "false")),
+        "is_llama_cpp_fork": _parse_bool(raw.get("is_llama_cpp_fork", "true")),
+        "smoke_test": raw.get("smoke_test", ""),
+        "upstream_ref": raw.get("upstream_ref") or None,
+        "status": raw.get("status", "active"),
+        "skip_reason": raw.get("skip_reason") or None,
+        "repos": [r.strip() for r in raw.get("repos", "").split(",") if r.strip()],
+    }
+
+
+def _parse_bool(value: str) -> bool:
+    """Coerce string to bool."""
+    return value.lower() in ("true", "1", "yes")
+
+
+def _validate_parent(targets_dir: Path, slug: str, parent: str | None) -> str | None:
+    """Check that parent target exists. Returns error string or None."""
+    if parent is None:
+        return None
+    parent_build_sh = targets_dir / parent / "build.sh"
+    if not parent_build_sh.exists():
+        return f"Target '{slug}' references parent '{parent}' but it does not exist"
+    return None
+
+
+def _detect_cycle(targets_dir: Path, slug: str) -> bool:
+    """Check if a parent chain from slug would form a cycle."""
+    visited: set[str] = {slug}
+    current = slug
+
+    while True:
+        build_sh = targets_dir / current / "build.sh"
+        if not build_sh.exists():
+            return False
+        try:
+            raw = parse_metadata_raw(build_sh)
+        except MetadataParseError:
+            return False
+        parent = raw.get("parent") or None
+        if parent is None:
+            return False
+        if parent in visited:
+            return True
+        visited.add(parent)
+        current = parent
 
 
 def generate_manifest(targets_dir: Path, repo_root: Path | None = None) -> dict:
@@ -71,7 +123,7 @@ def generate_manifest(targets_dir: Path, repo_root: Path | None = None) -> dict:
 
     if not targets_dir.is_dir():
         return {
-            "version": 2,
+            "version": 3,
             "generated_at": datetime.now(UTC).isoformat(),
             "targets": targets,
         }
@@ -105,6 +157,21 @@ def generate_manifest(targets_dir: Path, repo_root: Path | None = None) -> dict:
         ref = meta.get("ref", "")
         version_tag = f"{ref[:7]}-1" if len(ref) >= 7 else ""
 
+        # Parse v3 fields
+        new_fields = _parse_new_fields(meta)
+
+        # Validate parent references
+        parent_err = _validate_parent(targets_dir, slug, new_fields["parent"])
+        if parent_err:
+            warnings.warn(parent_err, stacklevel=2)
+
+        if _detect_cycle(targets_dir, slug):
+            warnings.warn(
+                f"Target '{slug}' has a parent cycle — ignoring parent field",
+                stacklevel=2,
+            )
+            new_fields["parent"] = None
+
         targets[slug] = {
             "name": meta["name"],
             "repo": meta["repo"],
@@ -120,10 +187,28 @@ def generate_manifest(targets_dir: Path, repo_root: Path | None = None) -> dict:
                 "os": "ubuntu",
                 "artifact": "",  # Populated at build time, not manifest gen time
             },
+            # v3 fields
+            "default_branch": new_fields["default_branch"],
+            "gpu_toolchain": new_fields["gpu_toolchain"],
+            "extra_cmake_flags": new_fields["extra_cmake_flags"],
+            "build_system": new_fields["build_system"],
+            "binary_names": new_fields["binary_names"],
+            "test_target": new_fields["test_target"],
+            "layer": new_fields["layer"],
+            "parent": new_fields["parent"],
+            "ci_capable": new_fields["ci_capable"],
+            "ci_compile_capable": new_fields["ci_compile_capable"],
+            "ci_test_capable": new_fields["ci_test_capable"],
+            "is_llama_cpp_fork": new_fields["is_llama_cpp_fork"],
+            "smoke_test": new_fields["smoke_test"],
+            "upstream_ref": new_fields["upstream_ref"],
+            "status": new_fields["status"],
+            "skip_reason": new_fields["skip_reason"],
+            "repos": new_fields["repos"],
         }
 
     return {
-        "version": 2,
+        "version": 3,
         "generated_at": datetime.now(UTC).isoformat(),
         "targets": targets,
     }

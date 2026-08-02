@@ -30,11 +30,11 @@ gh workflow run manifest-pages.yml --ref main
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| Pages deploy fails | GitHub Pages not enabled | Enable in repo Settings → Pages |
-| Manifest is stale | No tag pushed since last target change | Push a new `v*` tag |
-| Schema validation fails | Manifest doesn't match schema | Run `python -m scripts.audit_matrix` locally |
+| Symptom                 | Cause                                  | Fix                                          |
+| ----------------------- | -------------------------------------- | -------------------------------------------- |
+| Pages deploy fails      | GitHub Pages not enabled               | Enable in repo Settings → Pages              |
+| Manifest is stale       | No tag pushed since last target change | Push a new `v*` tag                          |
+| Schema validation fails | Manifest doesn't match schema          | Run `python -m scripts.audit_matrix` locally |
 
 ## Security
 

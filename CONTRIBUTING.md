@@ -11,7 +11,7 @@ Long-lived design debates, decision logs, and progress notes live as
 as separate Markdown files.
 
 `docs/superpowers/specs/*.md` is the engineering source of truth only
-for *in-flight* designs (spec → plan → implementation). Once an
+for _in-flight_ designs (spec → plan → implementation). Once an
 implementation lands, the design lives in the issue/PR conversation and
 in the code.
 
