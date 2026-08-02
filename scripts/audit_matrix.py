@@ -55,8 +55,28 @@ def _parse_matrix_targets(matrix_yml: str) -> set[str]:
     """Extract target slugs from matrix.yml include entries.
 
     Skips entries with ``disabled: true`` (placeholder GPU entries).
+    Handles YAML files with GitHub Actions expressions that may not parse cleanly.
     """
-    data = yaml.safe_load(matrix_yml)
+    # Preprocess: remove lines with GH Actions expressions (${{ ... }})
+    # that break YAML parsing, but keep the rest of the structure intact.
+
+    cleaned_lines = []
+    for line in matrix_yml.splitlines():
+        # Skip lines containing ${{ ... }} expressions
+        if "${{" in line:
+            continue
+        cleaned_lines.append(line)
+    cleaned_yml = "\n".join(cleaned_lines)
+
+    try:
+        data = yaml.safe_load(cleaned_yml)
+    except yaml.YAMLError:
+        # Still can't parse — return empty set
+        return set()
+
+    if data is None:
+        return set()
+
     targets = set()
 
     jobs = data.get("jobs", {})
