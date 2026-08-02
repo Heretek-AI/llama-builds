@@ -1,0 +1,75 @@
+name: Matrix Build
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      target_count: ${{ steps.set-matrix.outputs.target_count }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Discover build targets
+        id: set-matrix
+        run: |
+          # Glob targets/*/build.sh and build a JSON matrix
+          targets=()
+          for build_script in targets/*/build.sh; do
+            if [ -f "$build_script" ]; then
+              target=$(basename "$(dirname "$build_script")")
+              targets+=("$target")
+            fi
+          done
+
+          target_count=${#targets[@]}
+          echo "target_count=$target_count" >> "$GITHUB_OUTPUT"
+
+          if [ "$target_count" -eq 0 ]; then
+            echo "No targets found in targets/*/build.sh"
+            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Found $target_count target(s): ${targets[*]}"
+
+          # Build JSON matrix with include entries
+          matrix='{"include":['
+          first=true
+          for target in "${targets[@]}"; do
+            if [ "$first" = true ]; then
+              first=false
+            else
+              matrix+=','
+            fi
+            matrix+="{\"target\":\"$target\",\"backend\":\"$target\",\"arch\":\"x86_64\"}"
+          done
+          matrix+=']}'
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Generated matrix: $matrix"
+
+  build:
+    needs: discover
+    if: fromJson(needs.discover.outputs.matrix).include[0]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - name: Print matrix info
+        run: |
+          echo "Target:   ${{ matrix.target }}"
+          echo "Backend:  ${{ matrix.backend }}"
+          echo "Arch:     ${{ matrix.arch }}"
+          echo ""
+          echo "Skeleton only — no build steps yet."
+          echo "Real builds will be added when targets/*/build.sh"
+          echo "contains actual build logic."
