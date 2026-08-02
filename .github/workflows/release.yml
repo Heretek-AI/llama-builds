@@ -1,0 +1,74 @@
+# llama-builds/.github/workflows/release.yml
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate sequential tag
+        id: tag
+        run: |
+          EXISTING=$(gh release list --limit 1000 --json tagName --jq '.[].tagName' | grep -E '^b[0-9]+$' | sort -V || echo "")
+
+          if [ -z "$EXISTING" ]; then
+            NEXT=1000
+          else
+            HIGHEST=$(echo "$EXISTING" | tail -1 | sed 's/^b//')
+            NEXT=$((HIGHEST + 1))
+          fi
+
+          TAG=$(printf "b%d" $NEXT)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $TAG"
+
+      - name: Check tag uniqueness
+        id: check
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all artifacts
+        if: steps.check.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Create release archives
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          for artifact_dir in artifacts/llama-*/; do
+            name=$(basename "$artifact_dir")
+            cd "$artifact_dir"
+            zip -r "../../${name}-${TAG}.zip" ./*
+            cd ../..
+          done
+          ls -la *.zip
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "Automated release from upstream llama.cpp build." \
+            *.zip
