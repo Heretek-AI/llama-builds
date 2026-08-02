@@ -1,29 +1,25 @@
 #!/usr/bin/env bash
 # METADATA
-# name=llama.cpp upstream CPU baseline
+# name=llama.cpp upstream ROCm baseline
 # repo=ggml-org/llama.cpp
 # ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48
-# backend=cpu
+# backend=rocm
 # arch=x86_64
+# gpu_targets=gfx110X,gfx1151,gfx1150,gfx120X,gfx103X,gfx90a,gfx908
 # capabilities=chat,embed
+# runtime_deps=librocblas,libhipblas,libamdhip64,librocsolver,libroctx64
+# bundle_strategy=rocm-therock
 set -euo pipefail
-
-# Build llama.cpp CPU baseline from upstream.
-# The actual build logic is in the composite action (action.yml).
-# This script exists for:
-#   1. Manifest generation (METADATA header)
-#   2. Local development and testing
 
 REPO="${REPO:-ggml-org/llama.cpp}"
 REF="${REF:-main}"
 
-echo "Building llama.cpp CPU baseline"
+echo "Building llama.cpp ROCm baseline"
 echo "  Repo: $REPO"
 echo "  Ref:  $REF"
-echo "  Backend: cpu"
+echo "  Backend: rocm"
 echo "  Arch: x86_64"
 
-# For local builds (not in CI), clone and build manually
 if [[ -z "${GITHUB_ACTIONS:-}" ]]; then
   echo "Running outside GitHub Actions — building locally..."
 
@@ -35,12 +31,11 @@ if [[ -z "${GITHUB_ACTIONS:-}" ]]; then
 
   cd "$BUILD_DIR/repo"
   mkdir -p build && cd build
-  cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DGGML_HIP=ON -G Ninja
   cmake --build . -j"$(nproc)"
 
   echo "Build complete. Binaries in: $(pwd)"
   ls -la llama-server llama-cli 2>/dev/null || echo "Note: binary names may vary"
 else
   echo "Running in GitHub Actions — use the build-llama composite action."
-  echo "See: https://github.com/Heretek-AI/llama-builds/actions"
 fi

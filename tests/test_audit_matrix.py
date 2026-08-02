@@ -1,4 +1,4 @@
-"""Tests for audit_matrix.py — validates manifest vs matrix.yml + schema."""
+"""Tests for audit_matrix.py — validates manifest vs targets/ + schema."""
 
 import json
 import sys
@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scripts.audit_matrix import audit_manifest, audit_matrix
+from scripts.audit_matrix import audit_manifest, audit_targets_dir
 
 
 @pytest.fixture
@@ -43,29 +43,21 @@ def valid_manifest():
     }
 
 
-@pytest.fixture
-def matrix_yml_cpu_only():
-    """matrix.yml with a single CPU entry."""
-    return textwrap.dedent("""\
-        name: Matrix Build
-        on: [push]
-        permissions:
-          contents: read
-        jobs:
-          build:
-            runs-on: ubuntu-latest
-            strategy:
-              matrix:
-                include:
-                  - target: cpu
-                    backend: cpu
-                    arch: x86_64
-    """)
+METADATA_BLOCK = textwrap.dedent("""\
+    #!/usr/bin/env bash
+    # METADATA
+    # name=Test target
+    # repo=owner/repo
+    # ref=abc1234def5678
+    # backend=cpu
+    # arch=x86_64
+    # capabilities=chat
+    set -euo pipefail
+    echo "build"
+""")
 
 
 class TestAuditManifest:
-    """Validate manifest against schema."""
-
     def test_valid_manifest_passes(self, valid_manifest, schema):
         errors = audit_manifest(valid_manifest, schema)
         assert errors == []
@@ -80,127 +72,63 @@ class TestAuditManifest:
         errors = audit_manifest(valid_manifest, schema)
         assert len(errors) > 0, "Expected schema validation error for invalid backend"
 
-    def test_orphan_manifest_target_warning(self, valid_manifest):
-        """Manifest has a target not in matrix — should warn."""
-        matrix_yml = textwrap.dedent("""\
-            name: Matrix Build
-            on: [push]
-            permissions:
-              contents: read
-            jobs:
-              build:
-                runs-on: ubuntu-latest
-                strategy:
-                  matrix:
-                    include: []
-        """)
-        errors = audit_matrix(matrix_yml, valid_manifest)
-        assert any("not in matrix" in e.lower() or "missing entry" in e.lower() for e in errors)
 
+class TestAuditTargetsDir:
+    def test_matching_target_and_build_sh(self, valid_manifest, tmp_path):
+        targets_dir = tmp_path / "targets"
+        target_dir = targets_dir / "cpu"
+        target_dir.mkdir(parents=True)
+        (target_dir / "build.sh").write_text(METADATA_BLOCK)
 
-class TestAuditMatrix:
-    """Validate matrix.yml references real targets."""
-
-    def test_matrix_with_valid_entry(self, valid_manifest, matrix_yml_cpu_only):
-        errors = audit_matrix(matrix_yml_cpu_only, valid_manifest)
+        errors = audit_targets_dir(targets_dir, valid_manifest)
         assert errors == []
 
-    def test_matrix_missing_manifest_target(self, valid_manifest):
-        """Matrix doesn't list a target that's in the manifest."""
-        matrix_yml = textwrap.dedent("""\
-            name: Matrix Build
-            on: [push]
-            permissions:
-              contents: read
-            jobs:
-              build:
-                runs-on: ubuntu-latest
-                strategy:
-                  matrix:
-                    include: []
-        """)
-        errors = audit_matrix(matrix_yml, valid_manifest)
-        assert any("missing" in e.lower() or "not in matrix" in e.lower() for e in errors)
+    def test_manifest_target_missing_build_sh(self, valid_manifest, tmp_path):
+        targets_dir = tmp_path / "targets"
+        targets_dir.mkdir()
 
-    def test_matrix_empty_passes(self):
-        """Empty matrix + empty manifest = no errors."""
-        matrix_yml = textwrap.dedent("""\
-            name: Matrix Build
-            on: [push]
-            permissions:
-              contents: read
-            jobs:
-              build:
-                runs-on: ubuntu-latest
-                strategy:
-                  matrix:
-                    include: []
-        """)
+        errors = audit_targets_dir(targets_dir, valid_manifest)
+        assert any("no build.sh" in e.lower() for e in errors)
+
+    def test_build_sh_without_manifest_entry(self, tmp_path):
+        targets_dir = tmp_path / "targets"
+        target_dir = targets_dir / "orphan"
+        target_dir.mkdir(parents=True)
+        (target_dir / "build.sh").write_text(METADATA_BLOCK)
+
         manifest = {
             "version": 2,
             "generated_at": "2026-08-02T00:00:00Z",
             "targets": {},
         }
-        errors = audit_matrix(matrix_yml, manifest)
-        assert errors == []
+        errors = audit_targets_dir(targets_dir, manifest)
+        assert any("no manifest entry" in e.lower() for e in errors)
 
-
-class TestAuditMatrixV2:
-    """Validate v2 manifest fields in matrix audit."""
-
-    def test_gpu_target_validated(self):
-        """Matrix entry with gpu_target must match manifest."""
+    def test_empty_dirs_and_manifest_pass(self, tmp_path):
+        targets_dir = tmp_path / "targets"
+        targets_dir.mkdir()
         manifest = {
             "version": 2,
             "generated_at": "2026-08-02T00:00:00Z",
-            "targets": {
-                "cuda-sm89": {
-                    "name": "CUDA sm_89",
-                    "repo": "ggml-org/llama.cpp",
-                    "ref": "abc1234def5678",
-                    "backend": "cuda",
-                    "arch": "x86_64",
-                    "gpu_target": "sm_89",
-                    "capabilities": ["chat"],
-                    "version": "abc1234-1",
-                    "build": {
-                        "runner": "ubuntu-latest",
-                        "script": "targets/cuda-sm89/build.sh",
-                        "os": "ubuntu",
-                        "artifact": "llama-abc1234-1-ubuntu-cuda-x86_64-sm_89.tar.gz",
-                    },
-                }
-            },
+            "targets": {},
         }
-        matrix_yml = textwrap.dedent("""\
-            name: Matrix Build
-            on: [push]
-            permissions:
-              contents: read
-            jobs:
-              build:
-                runs-on: ubuntu-latest
-                strategy:
-                  matrix:
-                    include:
-                      - target: cuda-sm89
-                        backend: cuda
-                        arch: x86_64
-                        gpu_target: sm_89
-        """)
-        errors = audit_matrix(matrix_yml, manifest)
+        errors = audit_targets_dir(targets_dir, manifest)
         assert errors == []
 
-    def test_version_field_not_validated(self):
-        """Version field is informational — not validated against matrix."""
+    def test_build_sh_without_metadata_skipped(self, tmp_path):
+        targets_dir = tmp_path / "targets"
+        target_dir = targets_dir / "no-meta"
+        target_dir.mkdir(parents=True)
+        (target_dir / "build.sh").write_text("#!/usr/bin/env bash\necho 'no metadata'\n")
+
         manifest = {
             "version": 2,
             "generated_at": "2026-08-02T00:00:00Z",
             "targets": {
-                "cpu": {
-                    "name": "CPU",
+                "no-meta": {
+                    "name": "test",
                     "repo": "o/r",
-                    "ref": "abc1234def5678",
+                    "ref": "abc12345",
                     "backend": "cpu",
                     "arch": "x86_64",
                     "gpu_target": None,
@@ -208,27 +136,12 @@ class TestAuditMatrixV2:
                     "version": "abc1234-1",
                     "build": {
                         "runner": "ubuntu-latest",
-                        "script": "targets/cpu/build.sh",
+                        "script": "targets/no-meta/build.sh",
                         "os": "ubuntu",
                         "artifact": "",
                     },
                 }
             },
         }
-        matrix_yml = textwrap.dedent("""\
-            name: Matrix Build
-            on: [push]
-            permissions:
-              contents: read
-            jobs:
-              build:
-                runs-on: ubuntu-latest
-                strategy:
-                  matrix:
-                    include:
-                      - target: cpu
-                        backend: cpu
-                        arch: x86_64
-        """)
-        errors = audit_matrix(matrix_yml, manifest)
-        assert errors == []
+        errors = audit_targets_dir(targets_dir, manifest)
+        assert any("no build.sh with metadata" in e.lower() for e in errors)

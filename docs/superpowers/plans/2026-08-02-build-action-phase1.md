@@ -75,16 +75,19 @@ class TestGenerateVersionTag:
 
     def test_empty_sha_raises(self):
         import pytest
+
         with pytest.raises(ValueError):
             generate_version_tag("", 1)
 
     def test_zero_build_number_raises(self):
         import pytest
+
         with pytest.raises(ValueError):
             generate_version_tag("abc1234", 0)
 
     def test_negative_build_number_raises(self):
         import pytest
+
         with pytest.raises(ValueError):
             generate_version_tag("abc1234", -1)
 
@@ -102,11 +105,13 @@ class TestParseVersionTag:
 
     def test_parse_invalid_format(self):
         import pytest
+
         with pytest.raises(ValueError):
             parse_version_tag("invalid")
 
     def test_parse_no_build_number(self):
         import pytest
+
         with pytest.raises(ValueError):
             parse_version_tag("abc1234")
 ```
@@ -1106,6 +1111,7 @@ class TestUpstreamCpuTarget:
 
     def test_upstream_cpu_metadata(self):
         from scripts.generate_manifest import extract_metadata
+
         build_sh = Path("targets/upstream-cpu/build.sh")
         meta = extract_metadata(build_sh)
         assert meta is not None
@@ -1118,6 +1124,7 @@ class TestUpstreamCpuTarget:
 
     def test_upstream_cpu_in_manifest(self):
         from scripts.generate_manifest import generate_manifest
+
         manifest = generate_manifest(targets_dir=Path("targets"))
         assert "upstream-cpu" in manifest["targets"]
         target = manifest["targets"]["upstream-cpu"]

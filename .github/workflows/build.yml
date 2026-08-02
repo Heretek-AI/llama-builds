@@ -1,0 +1,188 @@
+# llama-builds/.github/workflows/build.yml
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: "latest"
+  workflow_dispatch:
+    inputs:
+      ref:
+        type: string
+        description: "llama.cpp ref (SHA, tag, branch, or 'latest')"
+        default: "latest"
+
+permissions:
+  contents: read
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.gen.outputs.matrix }}
+      target_count: ${{ steps.gen.outputs.target_count }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Generate build matrix
+        id: gen
+        run: |
+          python scripts/generate_matrix.py
+          # generate_matrix.py writes to matrix.json
+          matrix=$(cat matrix.json)
+          target_count=$(echo "$matrix" | python -c "import sys,json; print(len(json.load(sys.stdin)['include']))")
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "target_count=$target_count" >> "$GITHUB_OUTPUT"
+          echo "Matrix has $target_count target(s)"
+
+  build:
+    needs: generate-matrix
+    if: needs.generate-matrix.outputs.target_count != '0'
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Checkout target repo
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ inputs.ref == 'latest' && matrix.ref || inputs.ref }}
+          path: _build/target
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Resolve full SHA
+        id: resolve
+        run: |
+          cd _build/target
+          FULL_SHA=$(git rev-parse HEAD)
+          echo "resolved_sha=$FULL_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake ninja-build patchelf
+
+          case "${{ matrix.backend }}" in
+            cuda)
+              wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+              sudo dpkg -i cuda-keyring_1.1-1_all.deb
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq cuda-toolkit
+              ;;
+            rocm)
+              echo "::group::Installing ROCm"
+              curl -sL "https://rocm.nightlies.amd.com/tarball-multi-arch/" \
+                | grep -oP 'const files = \K\[.*?\]' \
+                | python -c "
+          import sys, json, re
+          files = json.load(sys.stdin)
+          prefix = 'therock-dist-linux-'
+          latest = max(
+              [f for f in files if f['name'].startswith(prefix) and f['name'].endswith('.tar.gz')],
+              key=lambda f: re.search(r'(\d{8})\.tar\.gz', f['name']).group(1)
+          ) if files else None
+          print(latest['name'] if latest else '')
+          " > /tmp/rocm_file.txt
+
+              ROCM_FILE=$(cat /tmp/rocm_file.txt)
+              if [ -n "$ROCM_FILE" ]; then
+                echo "Downloading $ROCM_FILE"
+                sudo mkdir -p /opt/rocm
+                curl -sL "https://rocm.nightlies.amd.com/tarball-multi-arch/$ROCM_FILE" \
+                  | sudo tar --use-compress-program=gzip -xf - -C /opt/rocm --strip-components=1
+              fi
+              echo "::endgroup::"
+              ;;
+            vulkan)
+              sudo apt-get install -y -qq libvulkan-dev vulkan-validationlayers
+              ;;
+          esac
+
+      - name: Set ROCm env vars
+        if: matrix.backend == 'rocm'
+        run: |
+          echo "HIP_PATH=/opt/rocm" >> "$GITHUB_ENV"
+          echo "ROCM_PATH=/opt/rocm" >> "$GITHUB_ENV"
+          echo "/opt/rocm/bin:/opt/rocm/llvm/bin:$PATH" >> "$GITHUB_PATH"
+
+      - name: CMake configure
+        run: |
+          cd _build/target
+
+          CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release"
+          case "${{ matrix.backend }}" in
+            cuda)   CMAKE_ARGS="$CMAKE_ARGS -DGGML_CUDA=ON" ;;
+            rocm)   CMAKE_ARGS="$CMAKE_ARGS -DGGML_HIP=ON -DGPU_TARGETS=${{ matrix.gfx_target || 'gfx1100' }}" ;;
+            vulkan) CMAKE_ARGS="$CMAKE_ARGS -DGGML_VULKAN=ON" ;;
+          esac
+
+          echo "CMake args: $CMAKE_ARGS"
+          # shellcheck disable=SC2086
+          cmake -B build $CMAKE_ARGS
+
+      - name: Build
+        run: |
+          cd _build/target
+          cmake --build build --config Release -j"$(nproc)"
+
+      - name: Collect artifacts
+        id: collect
+        run: |
+          INSTALL_DIR="${{ github.workspace }}/_build/install"
+          mkdir -p "$INSTALL_DIR"
+
+          cd _build/target/build/bin
+          BINARIES=()
+          for bin in llama-server llama-cli llama-bench llama-quantize; do
+            [ -f "$bin" ] && BINARIES+=("$bin")
+          done
+
+          if [ ${#BINARIES[@]} -eq 0 ]; then
+            echo "::error::No binaries found after build"
+            exit 1
+          fi
+
+          cp "${BINARIES[@]}" "$INSTALL_DIR/"
+          echo "install_dir=$INSTALL_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Bundle runtime libraries
+        run: |
+          python scripts/bundle_libs.py "${{ steps.collect.outputs.install_dir }}" "${{ matrix.bundle_strategy }}"
+
+      - name: Archive artifacts
+        id: archive
+        run: |
+          INSTALL_DIR="${{ steps.collect.outputs.install_dir }}"
+          FULL_SHA="${{ steps.resolve.outputs.resolved_sha }}"
+          REF_PREFIX="${FULL_SHA:0:7}"
+          GFX="${{ matrix.gfx_target }}"
+
+          if [ -n "$GFX" ]; then
+            ARCHIVE_NAME="llama-${REF_PREFIX}-1-ubuntu-${{ matrix.backend }}-${GFX}.tar.gz"
+          else
+            ARCHIVE_NAME="llama-${REF_PREFIX}-1-ubuntu-${{ matrix.backend }}-${{ matrix.arch }}.tar.gz"
+          fi
+
+          cd "$INSTALL_DIR"
+          tar czf "${{ github.workspace }}/${ARCHIVE_NAME}" ./*
+          echo "archive_name=$ARCHIVE_NAME" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: llama-${{ matrix.backend }}-${{ matrix.gfx_target || matrix.arch }}
+          path: _build/install/
+          retention-days: 30

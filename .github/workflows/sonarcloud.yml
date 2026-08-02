@@ -13,12 +13,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
       - uses: actions/setup-python@v7
         with: { python-version: "3.11" }
-      - run: pip install coverage
+      - run: pip install coverage pytest pyyaml jsonschema
       - run: pytest
       - name: SonarCloud scan
-        uses: SonarSource/sonarqube-scan-action@v2
+        uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
