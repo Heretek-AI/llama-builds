@@ -53,3 +53,24 @@ class TestTemplate:
         assert meta is not None
         assert "TODO" in meta["name"] or meta["name"] == "Target name"
         assert "/" in meta["repo"]  # must be owner/repo format
+        # ref placeholder must meet minLength: 7 (schema requirement)
+        assert len(meta["ref"]) >= 7, f"ref placeholder too short: {meta['ref']!r}"
+        # backend must be one of the allowed values
+        assert meta["backend"] in (
+            "cpu|cuda|rocm|vulkan|docs",
+        ), f"backend placeholder should indicate valid options, got: {meta['backend']!r}"
+        # arch must be one of the allowed values
+        assert meta["arch"] in (
+            "x86_64|aarch64",
+        ), f"arch placeholder should indicate valid options, got: {meta['arch']!r}"
+        # capabilities must be a non-empty list
+        assert len(meta["capabilities"]) > 0, "capabilities must not be empty"
+
+    def test_template_slug_excluded_from_manifest(self):
+        """The _template directory must not match TARGETS_PATTERN."""
+        import re
+
+        targets_pattern = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+        assert not targets_pattern.match(
+            "_template"
+        ), "_template should be excluded from manifest generation"
