@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "generated_at": "2026-08-02T15:34:16.069889+00:00",
+  "targets": {
+    "upstream-cpu": {
+      "name": "llama.cpp upstream CPU baseline",
+      "repo": "ggml-org/llama.cpp",
+      "ref": "5d3a7b0e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c",
+      "backend": "cpu",
+      "arch": "x86_64",
+      "gpu_target": null,
+      "capabilities": [
+        "chat",
+        "embed"
+      ],
+      "version": "5d3a7b0-1",
+      "build": {
+        "runner": "ubuntu-latest",
+        "script": "targets/upstream-cpu/build.sh",
+        "os": "ubuntu",
+        "artifact": ""
+      }
+    }
+  }
+}

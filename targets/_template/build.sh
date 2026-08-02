@@ -5,6 +5,7 @@
 # ref=<pinned-sha-or-tag>
 # backend=cpu|cuda|rocm|vulkan|docs
 # arch=x86_64|aarch64
+# gpu_target=<gpu-isa-or-empty>
 # capabilities=chat,embed
 set -euo pipefail
 
