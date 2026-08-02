@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generated_at": "2026-08-02T17:32:47.936131+00:00",
+  "generated_at": "2026-08-02T17:51:38.917993+00:00",
   "targets": {
     "upstream-cpu": {
       "name": "llama.cpp upstream CPU baseline",
