@@ -1,0 +1,319 @@
+name: "Build llama.cpp"
+description: "Build a llama.cpp fork for a specific backend and architecture"
+inputs:
+  repo:
+    description: "GitHub owner/repo to build (e.g. ggml-org/llama.cpp)"
+    required: true
+  ref:
+    description: "Git SHA, tag, or branch to build"
+    required: true
+  backend:
+    description: "Compute backend: cpu, cuda, rocm, vulkan"
+    required: true
+  arch:
+    description: "Target architecture"
+    required: false
+    default: "x86_64"
+  gpu_target:
+    description: "GPU ISA family (e.g. gfx1151, sm_89)"
+    required: false
+    default: ""
+  rocm_version:
+    description: "ROCm version (e.g. 6.2.0)"
+    required: false
+    default: ""
+  cuda_version:
+    description: "CUDA version (e.g. 12.6)"
+    required: false
+    default: ""
+  cmake_flags:
+    description: "Extra CMake flags (space-separated)"
+    required: false
+    default: ""
+  build_type:
+    description: "CMake build type"
+    required: false
+    default: "Release"
+outputs:
+  artifact_path:
+    description: "Path to the archived build artifact"
+  manifest_entry:
+    description: "JSON string — single target entry for manifest schema"
+  resolved_sha:
+    description: "Full SHA of the built ref"
+  version_tag:
+    description: "Generated version tag (e.g. abc1234-1)"
+runs:
+  using: "composite"
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        # Validate backend is one of the allowed values
+        case "${{ inputs.backend }}" in
+          cpu|cuda|rocm|vulkan) ;;
+          *)
+            echo "::error::Invalid backend: ${{ inputs.backend }} (expected cpu, cuda, rocm, or vulkan)"
+            exit 1
+            ;;
+        esac
+
+        # Validate repo format (owner/repo)
+        if [[ ! "${{ inputs.repo }}" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
+          echo "::error::Invalid repo format: ${{ inputs.repo }} (expected owner/repo)"
+          exit 1
+        fi
+
+        # Validate ref is at least 7 chars
+        if [[ "${{ inputs.ref }}" -lt 7 ]]; then
+          echo "::error::Ref must be at least 7 characters: ${{ inputs.ref }}"
+          exit 1
+        fi
+
+    - name: Checkout target repo
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repo }}
+        ref: ${{ inputs.ref }}
+        path: _build/target
+        fetch-depth: 1
+
+    - name: Resolve full SHA
+      id: resolve
+      shell: bash
+      run: |
+        cd _build/target
+        FULL_SHA=$(git rev-parse HEAD)
+        echo "resolved_sha=$FULL_SHA" >> "$GITHUB_OUTPUT"
+        echo "Resolved SHA: ${FULL_SHA:0:12}"
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq cmake ninja-build
+
+        case "${{ inputs.backend }}" in
+          cuda)
+            echo "::group::Installing CUDA toolkit"
+            # CUDA toolkit installation — use official NVIDIA action or apt
+            wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+            sudo dpkg -i cuda-keyring_1.1-1_all.deb
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq cuda-toolkit
+            echo "::endgroup::"
+            ;;
+          rocm)
+            echo "::group::Installing ROCm"
+            ROCM_VERSION="${{ inputs.rocm_version }}"
+            if [[ -z "$ROCM_VERSION" ]]; then
+              echo "::error::rocm_version input is required for ROCm backend"
+              exit 1
+            fi
+            # Install ROCm — simplified for Phase 1 (CPU target doesn't need this)
+            echo "ROCm $ROCM_VERSION installation — to be implemented in Phase 3"
+            echo "::endgroup::"
+            ;;
+          vulkan)
+            echo "::group::Installing Vulkan SDK"
+            sudo apt-get install -y -qq libvulkan-dev vulkan-validationlayers
+            echo "::endgroup::"
+            ;;
+          cpu)
+            echo "No extra dependencies needed for CPU backend"
+            ;;
+        esac
+
+    - name: CMake configure
+      shell: bash
+      run: |
+        cd _build/target
+        mkdir -p build && cd build
+
+        CMAKE_ARGS="-DCMAKE_BUILD_TYPE=${{ inputs.build_type }}"
+        CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/_build/install"
+
+        case "${{ inputs.backend }}" in
+          cuda)
+            CMAKE_ARGS="$CMAKE_ARGS -DGGML_CUDA=ON"
+            if [[ -n "${{ inputs.gpu_target }}" ]]; then
+              # Extract SM architecture from gpu_target (e.g. sm_89 -> 89)
+              SM_NUM="${{ inputs.gpu_target#sm_ }}"
+              CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_CUDA_ARCHITECTURES=$SM_NUM"
+            fi
+            ;;
+          rocm)
+            CMAKE_ARGS="$CMAKE_ARGS -DGGML_HIP=ON"
+            if [[ -n "${{ inputs.gpu_target }}" ]]; then
+              CMAKE_ARGS="$CMAKE_ARGS -DAMDGPU_TARGETS=${{ inputs.gpu_target }}"
+            fi
+            ;;
+          vulkan)
+            CMAKE_ARGS="$CMAKE_ARGS -DGGML_VULKAN=ON"
+            ;;
+        esac
+
+        # Add user-specified cmake flags
+        if [[ -n "${{ inputs.cmake_flags }}" ]]; then
+          CMAKE_ARGS="$CMAKE_ARGS ${{ inputs.cmake_flags }}"
+        fi
+
+        echo "CMake args: $CMAKE_ARGS"
+        cmake .. $CMAKE_ARGS -G Ninja
+
+    - name: Build
+      shell: bash
+      run: |
+        cd _build/target/build
+        cmake --build . --config ${{ inputs.build_type }} -j$(nproc)
+
+    - name: Collect artifacts
+      id: collect
+      shell: bash
+      run: |
+        INSTALL_DIR="${{ github.workspace }}/_build/install"
+        mkdir -p "$INSTALL_DIR"
+
+        cd _build/target/build
+
+        # Determine what was built
+        BINARIES=()
+        for bin in llama-server llama-cli llama-bench llama-quantize llama-perplexity llama-benchmark; do
+          if [[ -f "$bin" ]]; then
+            BINARIES+=("$bin")
+          fi
+        done
+
+        if [[ ${#BINARIES[@]} -eq 0 ]]; then
+          echo "::error::No binaries found after build"
+          exit 1
+        fi
+
+        echo "Found binaries: ${BINARIES[*]}"
+        cp "${BINARIES[@]}" "$INSTALL_DIR/"
+
+        # Collect backend-specific runtime libraries
+        case "${{ inputs.backend }}" in
+          rocm)
+            echo "Collecting ROCm runtime libraries..."
+            # Copy ROCm libs — to be implemented in Phase 3
+            ;;
+          cuda)
+            echo "Collecting CUDA runtime libraries..."
+            # Copy CUDA libs if needed — most systems have them in /usr/local/cuda
+            ;;
+        esac
+
+        echo "install_dir=$INSTALL_DIR" >> "$GITHUB_OUTPUT"
+
+    - name: Set RPATH
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        INSTALL_DIR="${{ steps.collect.outputs.install_dir }}"
+        cd "$INSTALL_DIR"
+
+        # Set RPATH to $ORIGIN for portable distribution
+        for bin in llama-*; do
+          if [[ -f "$bin" && -x "$bin" ]]; then
+            patchelf --set-rpath '$ORIGIN' "$bin" 2>/dev/null || true
+          fi
+        done
+
+    - name: Archive artifacts
+      id: archive
+      shell: bash
+      run: |
+        INSTALL_DIR="${{ steps.collect.outputs.install_dir }}"
+        FULL_SHA="${{ steps.resolve.outputs.resolved_sha }}"
+        REF_PREFIX="${FULL_SHA:0:7}"
+
+        # Determine OS name
+        OS_NAME="ubuntu"
+        case "${{ runner.os }}" in
+          Linux) OS_NAME="ubuntu" ;;
+          Windows) OS_NAME="windows" ;;
+          macOS) OS_NAME="macos" ;;
+        esac
+
+        # Build archive filename
+        ARCHIVE_NAME="llama-${REF_PREFIX}-1-${OS_NAME}-${{ inputs.backend }}-${{ inputs.arch }}"
+        if [[ -n "${{ inputs.gpu_target }}" ]]; then
+          ARCHIVE_NAME="${ARCHIVE_NAME}-${{ inputs.gpu_target }}"
+        fi
+        ARCHIVE_NAME="${ARCHIVE_NAME}.tar.gz"
+
+        # Create archive
+        cd "$INSTALL_DIR"
+        tar czf "${{ github.workspace }}/${ARCHIVE_NAME}" *
+
+        echo "archive_name=$ARCHIVE_NAME" >> "$GITHUB_OUTPUT"
+        echo "archive_path=${{ github.workspace }}/${ARCHIVE_NAME}" >> "$GITHUB_OUTPUT"
+        echo "artifact_path=${{ github.workspace }}/${ARCHIVE_NAME}" >> "$GITHUB_OUTPUT"
+
+    - name: Generate version tag
+      id: version
+      shell: bash
+      run: |
+        FULL_SHA="${{ steps.resolve.outputs.resolved_sha }}"
+        REF_PREFIX="${FULL_SHA:0:7}"
+        VERSION_TAG="${REF_PREFIX}-1"
+        echo "version_tag=$VERSION_TAG" >> "$GITHUB_OUTPUT"
+        echo "Version tag: $VERSION_TAG"
+
+    - name: Emit manifest entry
+      id: manifest
+      shell: bash
+      run: |
+        FULL_SHA="${{ steps.resolve.outputs.resolved_sha }}"
+        VERSION_TAG="${{ steps.version.outputs.version_tag }}"
+        ARCHIVE_NAME="${{ steps.archive.outputs.archive_name }}"
+
+        # Determine OS
+        OS_NAME="ubuntu"
+        case "${{ runner.os }}" in
+          Linux) OS_NAME="ubuntu" ;;
+          Windows) OS_NAME="windows" ;;
+          macOS) OS_NAME="macos" ;;
+        esac
+
+        # Build manifest entry JSON
+        GPU_TARGET="null"
+        if [[ -n "${{ inputs.gpu_target }}" ]]; then
+          GPU_TARGET="\"${{ inputs.gpu_target }}\""
+        fi
+
+        MANIFEST_ENTRY=$(cat <<EOF
+        {
+          "name": "${{ inputs.repo }} (${{ inputs.backend }})",
+          "repo": "${{ inputs.repo }}",
+          "ref": "$FULL_SHA",
+          "backend": "${{ inputs.backend }}",
+          "arch": "${{ inputs.arch }}",
+          "gpu_target": $GPU_TARGET,
+          "capabilities": ["chat"],
+          "version": "$VERSION_TAG",
+          "build": {
+            "runner": "ubuntu-latest",
+            "script": "",
+            "os": "$OS_NAME",
+            "artifact": "$ARCHIVE_NAME"
+          }
+        }
+        EOF
+        )
+
+        # Write to output (escape for GitHub Actions)
+        echo "manifest_entry=$MANIFEST_ENTRY" >> "$GITHUB_OUTPUT"
+
+    - name: Set outputs
+      shell: bash
+      run: |
+        echo "artifact_path=${{ steps.archive.outputs.artifact_path }}" >> "$GITHUB_OUTPUT"
+        echo "resolved_sha=${{ steps.resolve.outputs.resolved_sha }}" >> "$GITHUB_OUTPUT"
+
+    - name: Cleanup
+      if: always()
+      shell: bash
+      run: |
+        rm -rf _build
