@@ -122,7 +122,6 @@ jobs:
       - name: CMake configure
         run: |
           cd _build/target
-          mkdir -p build && cd build
 
           CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release"
           case "${{ matrix.backend }}" in
@@ -132,12 +131,12 @@ jobs:
           esac
 
           echo "CMake args: $CMAKE_ARGS"
-          cmake .. "$CMAKE_ARGS" -G Ninja
+          cmake -B build $CMAKE_ARGS -G Ninja
 
       - name: Build
         run: |
-          cd _build/target/build
-          cmake --build . --config Release -j$(nproc)
+          cd _build/target
+          cmake --build build --config Release -j$(nproc)
 
       - name: Collect artifacts
         id: collect
@@ -145,7 +144,7 @@ jobs:
           INSTALL_DIR="${{ github.workspace }}/_build/install"
           mkdir -p "$INSTALL_DIR"
 
-          cd _build/target/build
+          cd _build/target/build/bin
           BINARIES=()
           for bin in llama-server llama-cli llama-bench llama-quantize; do
             [ -f "$bin" ] && BINARIES+=("$bin")
