@@ -65,7 +65,7 @@ runs:
         fi
 
         # Validate ref is at least 7 chars
-        if [[ "${{ inputs.ref }}" -lt 7 ]]; then
+        if [[ "${#{{ inputs.ref }}}" -lt 7 ]]; then
           echo "::error::Ref must be at least 7 characters: ${{ inputs.ref }}"
           exit 1
         fi
@@ -283,25 +283,24 @@ runs:
           GPU_TARGET="\"${{ inputs.gpu_target }}\""
         fi
 
-        MANIFEST_ENTRY=$(cat <<EOF
-        {
-          "name": "${{ inputs.repo }} (${{ inputs.backend }})",
-          "repo": "${{ inputs.repo }}",
-          "ref": "$FULL_SHA",
-          "backend": "${{ inputs.backend }}",
-          "arch": "${{ inputs.arch }}",
-          "gpu_target": $GPU_TARGET,
+        MANIFEST_ENTRY=$(printf '{
+          "name": "%s (%s)",
+          "repo": "%s",
+          "ref": "%s",
+          "backend": "%s",
+          "arch": "%s",
+          "gpu_target": %s,
           "capabilities": ["chat"],
-          "version": "$VERSION_TAG",
+          "version": "%s",
           "build": {
             "runner": "ubuntu-latest",
             "script": "",
-            "os": "$OS_NAME",
-            "artifact": "$ARCHIVE_NAME"
+            "os": "%s",
+            "artifact": "%s"
           }
-        }
-        EOF
-        )
+        }' "${{ inputs.repo }}" "${{ inputs.backend }}" "${{ inputs.repo }}" \
+          "$FULL_SHA" "${{ inputs.backend }}" "${{ inputs.arch }}" "$GPU_TARGET" \
+          "$VERSION_TAG" "$OS_NAME" "$ARCHIVE_NAME")
 
         # Write to output (escape for GitHub Actions)
         echo "manifest_entry=$MANIFEST_ENTRY" >> "$GITHUB_OUTPUT"
