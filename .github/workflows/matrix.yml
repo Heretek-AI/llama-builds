@@ -17,100 +17,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml
+
       - name: Discover build targets
         id: set-matrix
         run: |
-          # Glob targets/*/build.sh and parse METADATA from each
-          # Skip directories starting with _ (e.g. _template)
-          targets=()
-          for build_script in targets/*/build.sh; do
-            if [ -f "$build_script" ]; then
-              target=$(basename "$(dirname "$build_script")")
-              if [[ "$target" == _* ]]; then
-                echo "Skipping template target: $target"
-                continue
-              fi
-              targets+=("$target")
-            fi
-          done
-
-          target_count=${#targets[@]}
-          echo "target_count=$target_count" >> "$GITHUB_OUTPUT"
-
-          if [ "$target_count" -eq 0 ]; then
-            echo "No targets found in targets/*/build.sh"
-            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "Found $target_count target(s): ${targets[*]}"
-
-          # Build JSON matrix with METADATA from each build.sh
-          matrix='{"include":['
-          first=true
-          for target in "${targets[@]}"; do
-            build_script="targets/$target/build.sh"
-            if [ ! -f "$build_script" ]; then
-              continue
-            fi
-
-            # Parse METADATA block: extract backend, arch, capabilities
-            backend=""
-            arch=""
-            capabilities=""
-            in_metadata=false
-            while IFS= read -r line; do
-              if [[ "$line" == "# METADATA" ]]; then
-                in_metadata=true
-                continue
-              fi
-              if [[ "$in_metadata" == true && "$line" =~ ^#\ ([^=]+)=(.+)$ ]]; then
-                key="${BASH_REMATCH[1]}"
-                val="${BASH_REMATCH[2]}"
-                case "$key" in
-                  backend) backend="$val" ;;
-                  arch) arch="$val" ;;
-                  capabilities) capabilities="$val" ;;
-                esac
-              elif [[ "$in_metadata" == true && ! "$line" =~ ^#\  ]]; then
-                # End of METADATA block
-                in_metadata=false
-                break
-              fi
-            done < "$build_script"
-
-            # Default arch to x86_64 if not specified
-            [ -z "$arch" ] && arch="x86_64"
-
-            # Convert capabilities CSV to JSON array
-            if [ -n "$capabilities" ]; then
-              caps_json="["
-              IFS=',' read -ra cap_list <<< "$capabilities"
-              cap_first=true
-              for cap in "${cap_list[@]}"; do
-                if [ "$cap_first" = true ]; then
-                  cap_first=false
-                else
-                  caps_json+=","
-                fi
-                caps_json+="\"$(echo "$cap" | xargs)\""
-              done
-              caps_json+="]"
-            else
-              caps_json="[]"
-            fi
-
-            if [ "$first" = true ]; then
-              first=false
-            else
-              matrix+=','
-            fi
-            matrix+="{\"target\":\"$target\",\"backend\":\"$backend\",\"arch\":\"$arch\",\"capabilities\":$caps_json}"
-          done
-          matrix+=']}'
-
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-          echo "Generated matrix: $matrix"
+          python scripts/generate_matrix.py
+          MATRIX=$(cat matrix.json)
+          TARGET_COUNT=$(echo "$MATRIX" | python -c "import sys,json; print(len(json.load(sys.stdin)['include']))")
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "target_count=$TARGET_COUNT" >> "$GITHUB_OUTPUT"
+          echo "Found $TARGET_COUNT target(s)"
 
   build:
     needs: discover
@@ -122,51 +45,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Read target METADATA
-        id: meta
-        run: |
-          build_script="targets/${{ matrix.target }}/build.sh"
-          repo=""
-          ref=""
-
-          if [ -f "$build_script" ]; then
-            in_metadata=false
-            while IFS= read -r line; do
-              if [[ "$line" == "# METADATA" ]]; then
-                in_metadata=true
-                continue
-              fi
-              if [[ "$in_metadata" == true && "$line" =~ ^#\ ([^=]+)=(.+)$ ]]; then
-                key="${BASH_REMATCH[1]}"
-                val="${BASH_REMATCH[2]}"
-                case "$key" in
-                  repo) repo="$val" ;;
-                  ref) ref="$val" ;;
-                esac
-              elif [[ "$in_metadata" == true && ! "$line" =~ ^#\  ]]; then
-                break
-              fi
-            done < "$build_script"
-          fi
-
-          if [ -z "$repo" ]; then
-            echo "::error::No repo found in METADATA for ${{ matrix.target }}"
-            exit 1
-          fi
-          if [ -z "$ref" ]; then
-            echo "::error::No ref found in METADATA for ${{ matrix.target }}"
-            exit 1
-          fi
-
-          echo "repo=$repo" >> "$GITHUB_OUTPUT"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
-          echo "repo=$repo ref=$ref"
-
       - name: Validate inputs
         shell: bash
         env:
-          REPO: ${{ steps.meta.outputs.repo }}
-          REF: ${{ steps.meta.outputs.ref }}
+          REPO: ${{ matrix.repo }}
+          REF: ${{ matrix.ref }}
           BACKEND: ${{ matrix.backend }}
         run: |
           # Validate backend is one of the allowed values
@@ -193,8 +76,8 @@ jobs:
       - name: Checkout target repo
         uses: actions/checkout@v7
         with:
-          repository: ${{ steps.meta.outputs.repo }}
-          ref: ${{ steps.meta.outputs.ref }}
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
           path: _build/target
           fetch-depth: 1
           persist-credentials: false
@@ -258,6 +141,11 @@ jobs:
               CMAKE_ARGS="$CMAKE_ARGS -DGGML_VULKAN=ON"
               ;;
           esac
+
+          # Apply target-specific CMake flags (e.g. -DCMAKE_CUDA_ARCHITECTURES=89)
+          if [[ -n "${{ matrix.extra_cmake_flags }}" ]]; then
+            CMAKE_ARGS="$CMAKE_ARGS ${{ matrix.extra_cmake_flags }}"
+          fi
 
           echo "CMake args: $CMAKE_ARGS"
           cmake .. "$CMAKE_ARGS"
@@ -324,6 +212,9 @@ jobs:
           esac
 
           ARCHIVE_NAME="llama-${REF_PREFIX}-1-${OS_NAME}-${{ matrix.backend }}-${{ matrix.arch }}"
+          if [[ -n "${{ matrix.gpu_target }}" ]]; then
+            ARCHIVE_NAME="${ARCHIVE_NAME}-${{ matrix.gpu_target }}"
+          fi
           ARCHIVE_NAME="${ARCHIVE_NAME}.tar.gz"
 
           cd "$INSTALL_DIR"
@@ -361,15 +252,16 @@ jobs:
           esac
 
           MANIFEST_ENTRY=$(jq -n \
-            --arg name "${{ steps.meta.outputs.repo }} (${{ matrix.backend }})" \
-            --arg repo "${{ steps.meta.outputs.repo }}" \
+            --arg name "${{ matrix.repo }} (${{ matrix.backend }})" \
+            --arg repo "${{ matrix.repo }}" \
             --arg ref "$FULL_SHA" \
             --arg backend "${{ matrix.backend }}" \
             --arg arch "${{ matrix.arch }}" \
+            --arg gpu_target "${{ matrix.gpu_target }}" \
             --arg version "$VERSION_TAG" \
             --arg os "$OS_NAME" \
             --arg artifact "$ARCHIVE_NAME" \
-            '{name:$name,repo:$repo,ref:$ref,backend:$backend,arch:$arch,gpu_target:null,capabilities:["chat"],version:$version,build:{runner:"ubuntu-latest",script:"",os:$os,artifact:$artifact}}')
+            '{name:$name,repo:$repo,ref:$ref,backend:$backend,arch:$arch,gpu_target:($gpu_target | if . == "" then null else . end),capabilities:["chat"],version:$version,build:{runner:"ubuntu-latest",script:"",os:$os,artifact:$artifact}}')
 
           {
             echo "manifest_entry<<MANIFEST_EOF"
