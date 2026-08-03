@@ -96,8 +96,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git clone --depth 1 \
-            https://x-access-token:${GITHUB_TOKEN}@github.com/ikawrakow/ik_llama.cpp.git \
-            _build/ik 2>&1 || echo "::warning::Clone failed (token may lack fork access); smoke test will be skipped."
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/ikawrakow/ik_llama.cpp.git" \
+            _build/ik 2>&1 \
+            || echo "::warning::Clone failed (token may lack fork access); smoke test will be skipped."
 
       - name: Build ik_llama.cpp (CPU)
         run: |
@@ -121,7 +122,8 @@ jobs:
           ./llama-cli \
             --model iqk-test-model.iq4.gguf \
             --prompt test \
-            --n-predict 1 || echo "::warning::smoke test exited non-zero — stub fixture is expected to fail weight load"
+            --n-predict 1 \
+            || echo "::warning::smoke test exited non-zero — stub fixture is expected to fail weight load"
 
       - name: Cleanup
         if: always()
