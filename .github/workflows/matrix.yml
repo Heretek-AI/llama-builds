@@ -103,7 +103,13 @@ jobs:
               wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
               sudo dpkg -i cuda-keyring_1.1-1_all.deb
               sudo apt-get update -qq
-              sudo apt-get install -y -qq cuda-toolkit
+              # ik-llama-cpp-cuda pins to CUDA 12.4; other targets use the rolling toolkit.
+              if [[ "${{ matrix.target }}" == "ik-llama-cpp-cuda" ]]; then
+                sudo apt-get install -y -qq cuda-12-4
+                bash scripts/check_cuda_version.sh 12.4.0
+              else
+                sudo apt-get install -y -qq cuda-toolkit
+              fi
               echo "::endgroup::"
               ;;
             rocm)

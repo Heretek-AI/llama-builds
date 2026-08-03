@@ -31,12 +31,23 @@ REPO="${REPO:-ikawrakow/ik_llama.cpp}"
 REF="${REF:-master}"
 BACKEND="${BACKEND:-cuda}"
 CUDA_ARCH="${CUDA_ARCH:-89}"
+CUDA_VERSION="${CUDA_VERSION:-12.4.0}"
 
 echo "Building ik_llama.cpp CUDA"
 echo "  Repo: $REPO"
 echo "  Ref:  $REF"
 echo "  Backend: $BACKEND"
 echo "  CUDA_ARCH: $CUDA_ARCH"
+echo "  CUDA_VERSION: $CUDA_VERSION"
+
+if command -v nvcc >/dev/null 2>&1; then
+  INSTALLED_CUDA="$(nvcc --version | awk -F'release ' '/release/ {print $2; exit}' | awk -F',' '{print $1}')"
+  if [[ -n "$INSTALLED_CUDA" && "$INSTALLED_CUDA" != "$CUDA_VERSION" ]]; then
+    echo "::error::CUDA toolkit version mismatch: expected $CUDA_VERSION, found $INSTALLED_CUDA"
+    exit 1
+  fi
+  echo "CUDA toolkit version check OK: $INSTALLED_CUDA"
+fi
 
 if [[ -z "${GITHUB_ACTIONS:-}" ]]; then
   echo "Running outside GitHub Actions — building locally..."
