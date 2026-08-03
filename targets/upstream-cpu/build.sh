@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # METADATA
 # name=llama.cpp upstream CPU baseline
+# description=Canonical ggml-org/llama.cpp CPU baseline (rationale: docs/fork-rationale/upstream-cpu.md)
 # repo=ggml-org/llama.cpp
 # ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48
 # backend=cpu

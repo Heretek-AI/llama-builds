@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # METADATA
 # name=ik_llama.cpp CUDA
+# description=ik_llama.cpp CUDA backend, CUDA 12.4.0 pinned (rationale: docs/fork-rationale/ik-llama-cpp-cuda.md)
 # repo=ikawrakow/ik_llama.cpp
 # ref=cb9147fd0d9c08a9a84eee5ac405a73f4e10e3e1
 # backend=cuda

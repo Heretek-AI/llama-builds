@@ -1,9 +1,10 @@
 {
   "version": 3,
-  "generated_at": "2026-08-03T00:28:54.068716+00:00",
+  "generated_at": "2026-08-03T19:11:14.959240+00:00",
   "targets": {
     "ik-llama-cpp": {
       "name": "ik_llama.cpp (SOTA IQ*K quants)",
+      "description": "ik_llama.cpp SOTA IQ*K + Trellis quants (rationale: docs/fork-rationale/ik-llama-cpp.md)",
       "repo": "ikawrakow/ik_llama.cpp",
       "ref": "cb9147fd0d9c08a9a84eee5ac405a73f4e10e3e1",
       "backend": "cpu",
@@ -42,6 +43,7 @@
     },
     "ik-llama-cpp-cuda": {
       "name": "ik_llama.cpp CUDA",
+      "description": "ik_llama.cpp CUDA backend, CUDA 12.4.0 pinned (rationale: docs/fork-rationale/ik-llama-cpp-cuda.md)",
       "repo": "ikawrakow/ik_llama.cpp",
       "ref": "cb9147fd0d9c08a9a84eee5ac405a73f4e10e3e1",
       "backend": "cuda",
@@ -80,6 +82,7 @@
     },
     "llama-cpp-dgx": {
       "name": "llama.cpp DGX Spark (deprecated)",
+      "description": "croll83 DGX Spark variant with NVFP4 + DFlash (rationale: docs/fork-rationale/llama-cpp-dgx.md)",
       "repo": "croll83/llama.cpp-dgx",
       "ref": "9131f2e6ec8f34a733fe9b141a2c5b07c16b7645",
       "backend": "cuda",
@@ -117,6 +120,7 @@
     },
     "upstream-cpu": {
       "name": "llama.cpp upstream CPU baseline",
+      "description": "Canonical ggml-org/llama.cpp CPU baseline (rationale: docs/fork-rationale/upstream-cpu.md)",
       "repo": "ggml-org/llama.cpp",
       "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
       "backend": "cpu",
@@ -153,6 +157,7 @@
     },
     "upstream-cuda": {
       "name": "llama.cpp upstream CUDA (universal)",
+      "description": "Universal PTX build for any CUDA-capable GPU (rationale: docs/fork-rationale/upstream-cuda.md)",
       "repo": "ggml-org/llama.cpp",
       "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
       "backend": "cuda",
@@ -190,6 +195,7 @@
     },
     "upstream-cuda-sm80": {
       "name": "llama.cpp upstream CUDA (sm_80)",
+      "description": "Native sm_80 build for Ampere datacenter (rationale: docs/fork-rationale/upstream-cuda-sm80.md)",
       "repo": "ggml-org/llama.cpp",
       "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
       "backend": "cuda",
@@ -227,6 +233,7 @@
     },
     "upstream-cuda-sm86": {
       "name": "llama.cpp upstream CUDA (sm_86)",
+      "description": "Native sm_86 build for Ampere consumer (rationale: docs/fork-rationale/upstream-cuda-sm86.md)",
       "repo": "ggml-org/llama.cpp",
       "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
       "backend": "cuda",
@@ -264,6 +271,7 @@
     },
     "upstream-cuda-sm89": {
       "name": "llama.cpp upstream CUDA (sm_89)",
+      "description": "Native sm_89 build for Ada Lovelace (rationale: docs/fork-rationale/upstream-cuda-sm89.md)",
       "repo": "ggml-org/llama.cpp",
       "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
       "backend": "cuda",
@@ -301,6 +309,7 @@
     },
     "upstream-cuda-sm90": {
       "name": "llama.cpp upstream CUDA (sm_90)",
+      "description": "Native sm_90 build for Hopper (rationale: docs/fork-rationale/upstream-cuda-sm90.md)",
       "repo": "ggml-org/llama.cpp",
       "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
       "backend": "cuda",
@@ -338,6 +347,7 @@
     },
     "upstream-rocm": {
       "name": "llama.cpp upstream ROCm baseline",
+      "description": "AMD ROCm/HIP baseline (rationale: docs/fork-rationale/upstream-rocm.md)",
       "repo": "ggml-org/llama.cpp",
       "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
       "backend": "rocm",
@@ -374,6 +384,7 @@
     },
     "upstream-vulkan": {
       "name": "llama.cpp upstream Vulkan",
+      "description": "Vulkan SPIR-V cross-vendor build (rationale: docs/fork-rationale/upstream-vulkan.md)",
       "repo": "ggml-org/llama.cpp",
       "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
       "backend": "vulkan",

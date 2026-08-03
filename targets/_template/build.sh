@@ -8,6 +8,7 @@
 # gpu_target=<gpu-isa-or-empty>
 # capabilities=chat,embed
 # --- v3 fields (all optional, shown with defaults) ---
+# description=
 # default_branch=main|master
 # gpu_toolchain=cuda|hip|metal|vulkan|none
 # extra_cmake_flags=
