@@ -29,7 +29,7 @@ def parse_metadata(build_sh: Path) -> dict:
     """Parse METADATA block from a target build.sh file.
 
     Returns dict with keys: name, repo, ref, backend, arch, capabilities,
-    gpu_targets, runtime_deps, bundle_strategy.
+    gpu_targets, runtime_deps, bundle_strategy, gpu_target, extra_cmake_flags.
 
     This is a backward-compatible wrapper around parse_metadata_typed
     from metadata_common.
@@ -47,6 +47,8 @@ def parse_metadata(build_sh: Path) -> dict:
     result["gpu_targets"] = typed.get("gpu_targets", DEFAULTS["gpu_targets"])
     result["runtime_deps"] = typed.get("runtime_deps", DEFAULTS["runtime_deps"])
     result["bundle_strategy"] = typed.get("bundle_strategy", DEFAULTS["bundle_strategy"])
+    result["gpu_target"] = typed.get("gpu_target", "")
+    result["extra_cmake_flags"] = typed.get("extra_cmake_flags", "")
     return result
 
 
