@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # METADATA
 # name=ik_llama.cpp (SOTA IQ*K quants)
+# description=ik_llama.cpp SOTA IQ*K + Trellis quants (rationale: docs/fork-rationale/ik-llama-cpp.md)
 # repo=ikawrakow/ik_llama.cpp
 # ref=cb9147fd0d9c08a9a84eee5ac405a73f4e10e3e1
 # backend=cpu

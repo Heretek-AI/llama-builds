@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # METADATA
 # name=llama.cpp upstream CUDA (sm_86)
+# description=Native sm_86 build for Ampere consumer (rationale: docs/fork-rationale/upstream-cuda-sm86.md)
 # repo=ggml-org/llama.cpp
 # ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48
 # backend=cuda

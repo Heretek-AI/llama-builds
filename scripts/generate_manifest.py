@@ -174,6 +174,7 @@ def generate_manifest(targets_dir: Path, repo_root: Path | None = None) -> dict:
 
         targets[slug] = {
             "name": meta["name"],
+            "description": meta.get("description", ""),
             "repo": meta["repo"],
             "ref": ref,
             "backend": meta["backend"],

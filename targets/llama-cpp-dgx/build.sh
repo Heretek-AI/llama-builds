@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # METADATA
 # name=llama.cpp DGX Spark (deprecated)
+# description=croll83 DGX Spark variant with NVFP4 + DFlash (rationale: docs/fork-rationale/llama-cpp-dgx.md)
 # repo=croll83/llama.cpp-dgx
 # ref=9131f2e6ec8f34a733fe9b141a2c5b07c16b7645
 # backend=cuda
