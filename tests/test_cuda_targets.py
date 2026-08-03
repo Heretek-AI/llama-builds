@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from scripts.generate_manifest import extract_metadata, generate_manifest
+from scripts.metadata_parser import generate_matrix
 
 
 class TestUpstreamCudaUniversal:
@@ -90,3 +91,37 @@ class TestSmSpecificTargets:
         manifest = generate_manifest(targets_dir=Path("targets"))
         target = manifest["targets"][slug]
         assert target["gpu_target"] == f"sm_{info['sm']}"
+
+
+class TestCudaMatrixEntries:
+    """Validate CUDA targets appear correctly in generated matrix."""
+
+    def test_sm89_matrix_entry_has_gpu_target(self):
+        """SM89 target should have gpu_target=sm_89 in matrix."""
+        matrix = generate_matrix(targets_dir=Path("targets"))
+        sm89_entries = [e for e in matrix["include"] if e["target"] == "upstream-cuda-sm89"]
+        assert len(sm89_entries) == 1
+        assert sm89_entries[0]["gpu_target"] == "sm_89"
+
+    def test_sm89_matrix_entry_has_cmake_flags(self):
+        """SM89 target should have extra_cmake_flags in matrix."""
+        matrix = generate_matrix(targets_dir=Path("targets"))
+        sm89_entries = [e for e in matrix["include"] if e["target"] == "upstream-cuda-sm89"]
+        assert len(sm89_entries) == 1
+        assert "CMAKE_CUDA_ARCHITECTURES=89" in sm89_entries[0]["extra_cmake_flags"]
+
+    def test_universal_cuda_no_gpu_target(self):
+        """Universal CUDA target should have gpu_target=None in matrix."""
+        matrix = generate_matrix(targets_dir=Path("targets"))
+        universal = [e for e in matrix["include"] if e["target"] == "upstream-cuda"]
+        assert len(universal) == 1
+        assert universal[0]["gpu_target"] is None
+
+    def test_all_sm_targets_present_in_matrix(self):
+        """All 4 SM-specific targets should appear in matrix."""
+        matrix = generate_matrix(targets_dir=Path("targets"))
+        targets = {e["target"] for e in matrix["include"]}
+        assert "upstream-cuda-sm80" in targets
+        assert "upstream-cuda-sm86" in targets
+        assert "upstream-cuda-sm89" in targets
+        assert "upstream-cuda-sm90" in targets
