@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # METADATA
-# name=llama.cpp upstream CUDA (sm_89/90a)
+# name=llama.cpp upstream CUDA (universal)
 # repo=ggml-org/llama.cpp
 # ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48
 # backend=cuda
@@ -8,21 +8,19 @@
 # capabilities=chat,embed,flash-attn
 set -euo pipefail
 
-# Build llama.cpp CUDA (sm_89/90a) from upstream.
-# The actual build logic is in the composite action (action.yml).
-# This script exists for:
-#   1. Manifest generation (METADATA header)
-#   2. Local development and testing
+# Build llama.cpp CUDA (universal) from upstream.
+# Uses llama.cpp's default CUDA architectures which builds for
+# all supported architectures via PTX fallback.
 
 REPO="${REPO:-ggml-org/llama.cpp}"
 REF="${REF:-main}"
 
-echo "Building llama.cpp CUDA (sm_89/90a)"
+echo "Building llama.cpp CUDA (universal)"
 echo "  Repo: $REPO"
 echo "  Ref:  $REF"
 echo "  Backend: cuda"
 echo "  Arch: x86_64"
-echo "  CUDA Architectures: 89;90"
+echo "  CUDA Architectures: all (llama.cpp defaults)"
 
 # For local builds (not in CI), clone and build manually
 if [[ -z "${GITHUB_ACTIONS:-}" ]]; then
@@ -61,7 +59,8 @@ if [[ -z "${GITHUB_ACTIONS:-}" ]]; then
 
   cd "$BUILD_DIR/repo"
   mkdir -p build && cd build
-  cmake .. -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES="89;90" -DCMAKE_BUILD_TYPE=Release -G Ninja
+  # Use llama.cpp's universal defaults for CUDA architectures
+  cmake .. -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release -G Ninja
   cmake --build . -j"$(nproc)"
 
   echo "Build complete. Binaries in: $(pwd)"
