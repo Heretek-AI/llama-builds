@@ -123,6 +123,48 @@ def test_generate_matrix_rocm_expands(tmp_path: Path) -> None:
     assert "gfx1151" in gfx_targets
 
 
+def test_generate_matrix_cuda_includes_gpu_target(tmp_path: Path) -> None:
+    target_dir = tmp_path / "upstream-cuda-sm89"
+    target_dir.mkdir()
+    (target_dir / "build.sh").write_text(
+        "#!/usr/bin/env bash\n"
+        "# METADATA\n"
+        "# name=llama.cpp upstream CUDA (sm_89)\n"
+        "# repo=ggml-org/llama.cpp\n"
+        "# ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48\n"
+        "# backend=cuda\n"
+        "# arch=x86_64\n"
+        "# gpu_target=sm_89\n"
+        "# capabilities=chat,embed,flash-attn\n"
+        "# extra_cmake_flags=-DCMAKE_CUDA_ARCHITECTURES=89\n"
+    )
+    matrix = generate_matrix(tmp_path)
+    assert len(matrix["include"]) == 1
+    entry = matrix["include"][0]
+    assert entry["gpu_target"] == "sm_89"
+    assert entry["extra_cmake_flags"] == "-DCMAKE_CUDA_ARCHITECTURES=89"
+
+
+def test_generate_matrix_cuda_universal_no_gpu_target(tmp_path: Path) -> None:
+    target_dir = tmp_path / "upstream-cuda"
+    target_dir.mkdir()
+    (target_dir / "build.sh").write_text(
+        "#!/usr/bin/env bash\n"
+        "# METADATA\n"
+        "# name=llama.cpp upstream CUDA (universal)\n"
+        "# repo=ggml-org/llama.cpp\n"
+        "# ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48\n"
+        "# backend=cuda\n"
+        "# arch=x86_64\n"
+        "# capabilities=chat,embed,flash-attn\n"
+    )
+    matrix = generate_matrix(tmp_path)
+    assert len(matrix["include"]) == 1
+    entry = matrix["include"][0]
+    assert entry["gpu_target"] is None
+    assert entry["extra_cmake_flags"] == ""
+
+
 def test_parse_cuda_sm_target(tmp_path: Path) -> None:
     build_sh = tmp_path / "build.sh"
     build_sh.write_text(

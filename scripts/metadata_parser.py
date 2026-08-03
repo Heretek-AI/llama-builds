@@ -95,6 +95,8 @@ def generate_matrix(targets_dir: Path) -> dict:
                     "backend": meta["backend"],
                     "arch": meta["arch"],
                     "gfx_target": None,
+                    "gpu_target": meta.get("gpu_target") or None,
+                    "extra_cmake_flags": meta.get("extra_cmake_flags", ""),
                     "repo": meta["repo"],
                     "ref": meta["ref"],
                     "bundle_strategy": meta["bundle_strategy"],
