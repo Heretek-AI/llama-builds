@@ -140,12 +140,35 @@ get_artifact_info() {
     if [[ -n "$version" ]]; then
         # Specific version requested
         echo "$manifest_json" | jq -r --arg slug "$target_slug" --arg ver "$version" \
-            '.targets[$slug] | select(.version == $ver) | {artifact: .build.artifact, version: .version}'
+            '.targets[$slug] | select(.version == $ver) | {artifact: .build.artifact, version: .version, sha256: (.build.sha256 // "null")}'
     else
         # Latest version
         echo "$manifest_json" | jq -r --arg slug "$target_slug" \
-            '.targets[$slug] | {artifact: .build.artifact, version: .version}'
+            '.targets[$slug] | {artifact: .build.artifact, version: .version, sha256: (.build.sha256 // "null")}'
     fi
+}
+
+# Verify SHA256 hash if available in manifest
+verify_sha256() {
+    local file_path="$1"
+    local expected_hash="$2"
+
+    if [[ -z "$expected_hash" || "$expected_hash" == "null" ]]; then
+        log_warn "No SHA256 hash available for this artifact — skipping verification"
+        return 0
+    fi
+
+    local actual_hash
+    actual_hash=$(sha256sum "$file_path" | cut -d' ' -f1)
+
+    if [[ "$actual_hash" != "$expected_hash" ]]; then
+        log_error "SHA256 mismatch! Expected: $expected_hash"
+        log_error "Actual:   $actual_hash"
+        log_error "The artifact may be corrupted or tampered with."
+        return 1
+    fi
+
+    log_info "SHA256 verified: $actual_hash"
 }
 
 # Download and verify artifact
@@ -160,10 +183,10 @@ download_artifact() {
 
     local tmp_dir
     tmp_dir=$(mktemp -d)
-    trap 'rm -rf "$tmp_dir"' EXIT
 
     if ! curl -sSL --fail -o "$tmp_dir/$artifact_name" "$download_url"; then
         log_error "Failed to download artifact"
+        rm -rf "$tmp_dir"
         return 1
     fi
 
@@ -195,7 +218,7 @@ list_builds() {
 
     echo "Available builds:"
     echo ""
-    echo "$manifest_json" | jq -r '.targets | to_entries[] | select(.value.backend == "cuda") | "\(.key)\t\(.value.name)\t\(..value.version)\t\(.value.build.artifact)"' | \
+    echo "$manifest_json" | jq -r '.targets | to_entries[] | select(.value.backend == "cuda") | "\(.key)\t\(.value.name)\t\(.value.version)\t\(.value.build.artifact)"' | \
         column -t -s$'\t'
 }
 
@@ -209,6 +232,10 @@ main() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --version)
+                if [[ $# -lt 2 || "$2" == --* ]]; then
+                    log_error "--version requires a VERSION argument (e.g., --version abc1234-1)"
+                    exit 1
+                fi
                 version="$2"
                 shift 2
                 ;;
@@ -269,11 +296,11 @@ main() {
         log_info "Detected NVIDIA GPU with compute capability: $compute_cap"
         target_slug=$(map_gpu_to_target "$compute_cap" "$gpu_map_json")
     elif compute_cap=$(detect_amd_gpu); then
-        log_warn "AMD GPU detected — CUDA builds may not work"
-        target_slug="upstream-cuda"  # Fall back to universal
+        log_info "AMD GPU detected — using ROCm build"
+        target_slug="upstream-rocm"
     else
-        log_warn "No GPU detected — using universal build"
-        target_slug="upstream-cuda"
+        log_warn "No GPU detected — using CPU build"
+        target_slug="upstream-cpu"
     fi
 
     log_info "Selected target: $target_slug"
@@ -289,6 +316,8 @@ main() {
     artifact_name=$(echo "$artifact_info" | jq -r '.artifact')
     local artifact_version
     artifact_version=$(echo "$artifact_info" | jq -r '.version')
+    local artifact_sha256
+    artifact_sha256=$(echo "$artifact_info" | jq -r '.sha256')
 
     if [[ -z "$artifact_name" || "$artifact_name" == "null" ]]; then
         log_error "No artifact found for target '$target_slug'"
@@ -316,7 +345,17 @@ main() {
         exit 1
     }
 
+    # Verify SHA256 if available
+    verify_sha256 "$artifact_path" "$artifact_sha256" || {
+        log_error "SHA256 verification failed — aborting installation"
+        rm -rf "$(dirname "$artifact_path")"
+        exit 1
+    }
+
     install_binary "$artifact_path"
+
+    # Clean up temp directory
+    rm -rf "$(dirname "$artifact_path")"
 
     log_info "Done! Run 'llama-cli --version' to verify."
 }
