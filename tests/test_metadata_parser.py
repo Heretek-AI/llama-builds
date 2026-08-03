@@ -121,3 +121,23 @@ def test_generate_matrix_rocm_expands(tmp_path: Path) -> None:
     assert "gfx1100" in gfx_targets
     assert "gfx1103" in gfx_targets
     assert "gfx1151" in gfx_targets
+
+
+def test_parse_cuda_sm_target(tmp_path: Path) -> None:
+    build_sh = tmp_path / "build.sh"
+    build_sh.write_text(
+        "#!/usr/bin/env bash\n"
+        "# METADATA\n"
+        "# name=llama.cpp upstream CUDA (sm_89)\n"
+        "# repo=ggml-org/llama.cpp\n"
+        "# ref=0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48\n"
+        "# backend=cuda\n"
+        "# arch=x86_64\n"
+        "# gpu_target=sm_89\n"
+        "# capabilities=chat,embed,flash-attn\n"
+        "# extra_cmake_flags=-DCMAKE_CUDA_ARCHITECTURES=89\n"
+        "set -euo pipefail\n"
+    )
+    meta = parse_metadata(build_sh)
+    assert meta["gpu_target"] == "sm_89"
+    assert meta["extra_cmake_flags"] == "-DCMAKE_CUDA_ARCHITECTURES=89"
