@@ -1,0 +1,324 @@
+#!/usr/bin/env bash
+# llamaup - Binary distribution CLI for llama.cpp builds
+# Usage: curl -sSL https://heretek-ai.github.io/llama-builds/llamaup | bash
+#
+# Auto-detects GPU and installs the right binary from our manifest.
+
+set -euo pipefail
+
+# Configuration
+MANIFEST_URL="${LLAMAUP_MANIFEST_URL:-https://heretek-ai.github.io/llama-builds/manifest.json}"
+INSTALL_DIR="${LLAMAUP_INSTALL_DIR:-$HOME/.local/bin}"
+GPU_MAP_URL="${LLAMAUP_GPU_MAP_URL:-https://raw.githubusercontent.com/Heretek-AI/llama-builds/main/configs/gpu_map.json}"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+usage() {
+    cat <<EOF
+llamaup - Install pre-built llama.cpp binaries
+
+Usage: llamaup [OPTIONS]
+
+Options:
+  --version VERSION    Install a specific version (e.g., abc1234-1)
+  --list               List available builds
+  --dry-run            Show what would be installed without installing
+  --install-dir DIR    Install to DIR (default: ~/.local/bin)
+  --help               Show this help message
+
+Examples:
+  llamaup                    # Auto-detect GPU and install
+  llamaup --list             # See available builds
+  llamaup --dry-run          # Preview installation
+  llamaup --version abc1234-1  # Install specific version
+
+Environment Variables:
+  LLAMAUP_MANIFEST_URL      Override manifest URL
+  LLAMAUP_INSTALL_DIR       Override install directory
+  LLAMAUP_GPU_MAP_URL       Override GPU map URL
+EOF
+}
+
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check for required commands
+check_deps() {
+    local missing=()
+    for cmd in curl jq; do
+        if ! command -v "$cmd" &> /dev/null; then
+            missing+=("$cmd")
+        fi
+    done
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        log_error "Missing required commands: ${missing[*]}"
+        log_error "Install them with: sudo apt-get install ${missing[*]}"
+        exit 1
+    fi
+}
+
+# Fetch JSON from URL
+fetch_json() {
+    local url="$1"
+    curl -sSL --fail "$url" 2>/dev/null
+}
+
+# Detect NVIDIA GPU compute capability
+detect_nvidia_gpu() {
+    if ! command -v nvidia-smi &> /dev/null; then
+        return 1
+    fi
+
+    local compute_cap
+    compute_cap=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1)
+
+    if [[ -z "$compute_cap" ]]; then
+        return 1
+    fi
+
+    # Convert "8.9" format to "8.9" (already correct)
+    echo "$compute_cap"
+}
+
+# Detect AMD GPU
+detect_amd_gpu() {
+    if ! command -v rocm-smi &> /dev/null; then
+        return 1
+    fi
+
+    # ROCm detection - return "rocm" as indicator
+    echo "rocm"
+}
+
+# Map compute capability to target slug
+map_gpu_to_target() {
+    local compute_cap="$1"
+    local gpu_map_json="$2"
+
+    # Try exact match first
+    local target
+    target=$(echo "$gpu_map_json" | jq -r --arg cap "$compute_cap" '.[$cap] // empty')
+
+    if [[ -n "$target" ]]; then
+        echo "$target"
+        return 0
+    fi
+
+    # Try major version match (e.g., "8.9" -> "8")
+    local major
+    major=$(echo "$compute_cap" | cut -d. -f1)
+    target=$(echo "$gpu_map_json" | jq -r --arg cap "$major" '.[$cap] // empty')
+
+    if [[ -n "$target" ]]; then
+        echo "$target"
+        return 0
+    fi
+
+    # Fall back to default
+    echo "$gpu_map_json" | jq -r '.default'
+}
+
+# Get artifact info from manifest
+get_artifact_info() {
+    local manifest_json="$1"
+    local target_slug="$2"
+    local version="${3:-}"
+
+    if [[ -n "$version" ]]; then
+        # Specific version requested
+        echo "$manifest_json" | jq -r --arg slug "$target_slug" --arg ver "$version" \
+            '.targets[$slug] | select(.version == $ver) | {artifact: .build.artifact, version: .version}'
+    else
+        # Latest version
+        echo "$manifest_json" | jq -r --arg slug "$target_slug" \
+            '.targets[$slug] | {artifact: .build.artifact, version: .version}'
+    fi
+}
+
+# Download and verify artifact
+download_artifact() {
+    local artifact_name="$1"
+    local version="$2"
+
+    # Construct download URL (GitHub Releases format)
+    local download_url="https://github.com/Heretek-AI/llama-builds/releases/download/v${version}/${artifact_name}"
+
+    log_info "Downloading: $artifact_name"
+
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+    trap 'rm -rf "$tmp_dir"' EXIT
+
+    if ! curl -sSL --fail -o "$tmp_dir/$artifact_name" "$download_url"; then
+        log_error "Failed to download artifact"
+        return 1
+    fi
+
+    echo "$tmp_dir/$artifact_name"
+}
+
+# Install binary
+install_binary() {
+    local artifact_path="$1"
+
+    mkdir -p "$INSTALL_DIR"
+
+    log_info "Installing to: $INSTALL_DIR"
+
+    # Extract archive
+    tar -xzf "$artifact_path" -C "$INSTALL_DIR"
+
+    # Make binaries executable
+    chmod +x "$INSTALL_DIR"/llama-* 2>/dev/null || true
+
+    log_info "Installation complete!"
+    log_info "Binaries installed to: $INSTALL_DIR"
+    log_info "Add to PATH: export PATH=\"$INSTALL_DIR:\$PATH\""
+}
+
+# List available builds
+list_builds() {
+    local manifest_json="$1"
+
+    echo "Available builds:"
+    echo ""
+    echo "$manifest_json" | jq -r '.targets | to_entries[] | select(.value.backend == "cuda") | "\(.key)\t\(.value.name)\t\(..value.version)\t\(.value.build.artifact)"' | \
+        column -t -s$'\t'
+}
+
+# Main function
+main() {
+    local version=""
+    local list_only=false
+    local dry_run=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --version)
+                version="$2"
+                shift 2
+                ;;
+            --list)
+                list_only=true
+                shift
+                ;;
+            --dry-run)
+                dry_run=true
+                shift
+                ;;
+            --install-dir)
+                INSTALL_DIR="$2"
+                shift 2
+                ;;
+            --help|-h)
+                usage
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+        esac
+    done
+
+    # Check dependencies
+    check_deps
+
+    # Fetch manifest
+    log_info "Fetching manifest..."
+    local manifest_json
+    manifest_json=$(fetch_json "$MANIFEST_URL") || {
+        log_error "Failed to fetch manifest from $MANIFEST_URL"
+        exit 1
+    }
+
+    # List mode
+    if [[ "$list_only" == true ]]; then
+        list_builds "$manifest_json"
+        exit 0
+    fi
+
+    # Fetch GPU map
+    log_info "Fetching GPU map..."
+    local gpu_map_json
+    gpu_map_json=$(fetch_json "$GPU_MAP_URL") || {
+        log_error "Failed to fetch GPU map from $GPU_MAP_URL"
+        exit 1
+    }
+
+    # Detect GPU
+    local compute_cap
+    local target_slug
+
+    if compute_cap=$(detect_nvidia_gpu); then
+        log_info "Detected NVIDIA GPU with compute capability: $compute_cap"
+        target_slug=$(map_gpu_to_target "$compute_cap" "$gpu_map_json")
+    elif compute_cap=$(detect_amd_gpu); then
+        log_warn "AMD GPU detected — CUDA builds may not work"
+        target_slug="upstream-cuda"  # Fall back to universal
+    else
+        log_warn "No GPU detected — using universal build"
+        target_slug="upstream-cuda"
+    fi
+
+    log_info "Selected target: $target_slug"
+
+    # Get artifact info
+    local artifact_info
+    artifact_info=$(get_artifact_info "$manifest_json" "$target_slug" "$version") || {
+        log_error "Target '$target_slug' not found in manifest"
+        exit 1
+    }
+
+    local artifact_name
+    artifact_name=$(echo "$artifact_info" | jq -r '.artifact')
+    local artifact_version
+    artifact_version=$(echo "$artifact_info" | jq -r '.version')
+
+    if [[ -z "$artifact_name" || "$artifact_name" == "null" ]]; then
+        log_error "No artifact found for target '$target_slug'"
+        exit 1
+    fi
+
+    log_info "Artifact: $artifact_name"
+    log_info "Version: $artifact_version"
+
+    # Dry run mode
+    if [[ "$dry_run" == true ]]; then
+        echo ""
+        echo "Dry run — would install:"
+        echo "  Target: $target_slug"
+        echo "  Artifact: $artifact_name"
+        echo "  Version: $artifact_version"
+        echo "  Install to: $INSTALL_DIR"
+        exit 0
+    fi
+
+    # Download and install
+    local artifact_path
+    artifact_path=$(download_artifact "$artifact_name" "$artifact_version") || {
+        log_error "Failed to download artifact"
+        exit 1
+    }
+
+    install_binary "$artifact_path"
+
+    log_info "Done! Run 'llama-cli --version' to verify."
+}
+
+main "$@"

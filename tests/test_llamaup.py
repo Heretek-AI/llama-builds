@@ -44,3 +44,41 @@ class TestGpuMap:
         assert "8.6" in data, "Missing compute capability 8.6 (RTX 30xx)"
         assert "8.9" in data, "Missing compute capability 8.9 (RTX 40xx)"
         assert "9.0" in data, "Missing compute capability 9.0 (H100)"
+
+
+class TestLlamaup:
+    """Validate llamaup script."""
+
+    def test_llamaup_exists(self):
+        """scripts/llamaup should exist."""
+        llamaup = Path("scripts/llamaup")
+        assert llamaup.exists(), "scripts/llamaup must exist"
+
+    def test_llamaup_executable(self):
+        """scripts/llamaup should be executable."""
+        llamaup = Path("scripts/llamaup")
+        assert llamaup.stat().st_mode & 0o111, "scripts/llamaup must be executable"
+
+    def test_llamaup_has_shebang(self):
+        """scripts/llamaup should have a shebang line."""
+        llamaup = Path("scripts/llamaup")
+        first_line = llamaup.read_text().splitlines()[0]
+        assert first_line.startswith("#!/"), "scripts/llamaup must start with shebang"
+
+    def test_llamaup_help_flag(self):
+        """scripts/llamaup --help should print usage."""
+        llamaup = Path("scripts/llamaup")
+        content = llamaup.read_text()
+        assert "--help" in content or "-h" in content, "llamaup should support --help"
+
+    def test_llamaup_list_flag(self):
+        """scripts/llamaup should support --list flag."""
+        llamaup = Path("scripts/llamaup")
+        content = llamaup.read_text()
+        assert "--list" in content, "llamaup should support --list"
+
+    def test_llamaup_dry_run_flag(self):
+        """scripts/llamaup should support --dry-run flag."""
+        llamaup = Path("scripts/llamaup")
+        content = llamaup.read_text()
+        assert "--dry-run" in content, "llamaup should support --dry-run"
