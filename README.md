@@ -70,6 +70,50 @@ pytest tests/ -v
 
 ---
 
+## CUDA Builds
+
+We provide pre-built CUDA binaries for common GPU architectures:
+
+| Build | SM | GPUs | Notes |
+|-------|-----|------|-------|
+| `upstream-cuda` | universal | All CUDA GPUs | PTX fallback, works everywhere |
+| `upstream-cuda-sm80` | sm_80 | A100, A30 | Optimized for datacenter Ampere |
+| `upstream-cuda-sm86` | sm_86 | RTX 30xx, A10 | Optimized for consumer Ampere |
+| `upstream-cuda-sm89` | sm_89 | RTX 40xx, L4, L40S | Optimized for Ada Lovelace |
+| `upstream-cuda-sm90` | sm_90 | H100, H200 | Optimized for Hopper |
+
+The universal build uses llama.cpp's default `CMAKE_CUDA_ARCHITECTURES`,
+which compiles for all supported architectures via PTX fallback. This means
+one binary works on any CUDA GPU, but may have JIT overhead on first run.
+
+SM-specific builds are optimized for exact architectures, avoiding JIT
+overhead and producing smaller binaries.
+
+---
+
+## Quick Install
+
+Install pre-built binaries with `llamaup`:
+
+```bash
+curl -sSL https://heretek-ai.github.io/llama-builds/llamaup | bash
+```
+
+This will:
+1. Auto-detect your GPU
+2. Download the right binary for your architecture
+3. Install to `~/.local/bin`
+
+### Options
+
+```bash
+llamaup --list              # See available builds
+llamaup --dry-run           # Preview what would be installed
+llamaup --version abc1234-1 # Install specific version
+```
+
+---
+
 ## How It Works
 
 ```mermaid
