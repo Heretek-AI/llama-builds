@@ -1,8 +1,8 @@
 # Contributing to llama-builds
 
 This project follows the Heretek harness contract. See
-[`docs/superpowers/specs/2026-08-01-monorepo-manager-harness-design.md`](docs/superpowers/specs/2026-08-01-monorepo-manager-harness-design.md)
-for the umbrella spec.
+[`docs/superpowers/specs/`](docs/superpowers/specs/)
+for design specs and implementation plans.
 
 ## Tracking
 

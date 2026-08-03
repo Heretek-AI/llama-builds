@@ -165,6 +165,10 @@ The manifest (`manifest.json`) is validated against a JSON Schema with 30+ field
 | `upstream-watch.yml` | every 6 hours | Detect upstream llama.cpp changes |
 | `fork-health.yml` | weekly | Audit fork repos for staleness |
 | `hardware-day.yml` | manual dispatch | On-demand GPU builds |
+| `pre-commit.yml` | pull_request/push | Pre-commit hook validation |
+| `super-linter.yml` | pull_request/push | GitHub Super Linter |
+| `sonarcloud.yml` | pull_request/push | SonarCloud code quality |
+| `codeql-analysis.yml` | pull_request/push | CodeQL security analysis |
 
 **Required checks on `main`:** pre-commit, super-linter, sonarcloud, gitleaks.
 
@@ -189,7 +193,7 @@ llama-builds/
 ├── schemas/                   # JSON Schema definitions
 ├── tests/                     # 111 test functions
 ├── docs/                      # Design specs, runbooks
-└── .github/workflows/         # 10 CI/CD workflows
+└── .github/workflows/         # 11 CI/CD workflows
 ```
 
 ---

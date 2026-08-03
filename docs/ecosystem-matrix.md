@@ -22,16 +22,19 @@ Targets in `targets/` are **build targets** (produce binaries). Everything here 
 | ----- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | #11   | sgl-project/sglang           | Python serving framework (pip/PyTorch/flashinfer), not a llama.cpp fork. Uses llama.cpp only as optional backend via `sglang[llamacpp]` |
 | #14   | lemonade-sdk/llamacpp-rocm   | CI recipe for upstream+ROCm7 with ephemeral S3 nightly tarballs. No forked source code                                                  |
+| #15   | TheTom/llama-cpp-turboquant  | Fork of AtomicBot-ai/atomic-llama-cpp-turboquant — exists but WHT+TCQ quantization not distinct enough for separate target             |
+| #17   | spiritbuun/buun-llama-cpp    | Exists but NOT a llama.cpp fork (`isFork: false`) — fails `is_llama_cpp_fork` gate                                                      |
+| #18   | huawei-csl/KVarN             | Exists but is a vLLM KV-cache backend, not a llama.cpp fork                                                                             |
 | #20   | microsoft/BitNet             | 1-bit inference engine. Has CMakeLists.txt but may not be a llama.cpp fork — needs verification. Build requires clang-18+               |
 | #21   | NVIDIA-Merlin/HierarchicalKV | CUDA header-only RecSys KV library (Bazel/CMake, SM8+), not a llama.cpp fork                                                            |
 
-## Phantom Repos (404 / not found)
+## Phantom Repos (verified 2026-08-02)
 
-| Issue | Repo                        | Status                                                           |
-| ----- | --------------------------- | ---------------------------------------------------------------- |
-| #15   | TheTom/llama-cpp-turboquant | 404 — code lives in #16 AtomicBot-ai/atomic-llama-cpp-turboquant |
-| #17   | spiritbuun/buun-llama-cpp   | 404                                                              |
-| #18   | huawei-csl/KVarN            | 404                                                              |
+| Issue | Repo                        | Status                                                                                     |
+| ----- | --------------------------- | ------------------------------------------------------------------------------------------ |
+| #15   | TheTom/llama-cpp-turboquant | Exists (fork of AtomicBot-ai/atomic-llama-cpp-turboquant) — see Rejected Targets           |
+| #17   | spiritbuun/buun-llama-cpp   | Exists but NOT a llama.cpp fork — rejected per `is_llama_cpp_fork` gate                     |
+| #18   | huawei-csl/KVarN            | Exists but is a vLLM KV-cache backend, not a llama.cpp fork — rejected                     |
 
 ## Bindings (reference-only, not build targets)
 
