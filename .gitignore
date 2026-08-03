@@ -26,7 +26,8 @@ Thumbs.db
 # Project harness state
 .omc/
 .omc-workspace
-.omo/
+.omo/*
+!.omo/roadmap
 .mcp.json
 .heretek-harness.json
 

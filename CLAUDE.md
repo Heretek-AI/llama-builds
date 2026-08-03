@@ -24,3 +24,8 @@ adds Claude-specific guidance.
 - `Stop` hook runs lint-only verification before allowing the turn to end.
 - A `.claude/hooks/.lockfile` hash mismatch refuses to load this manifest;
   run `scripts/init-harness.sh --refresh-hooks` to remediate.
+
+## Current roadmap
+- 2026-08-03 ulw-research sprint active (label: `roadmap/ulw-research-2026-08-03`)
+- Open issues: `gh issue list --label roadmap/ulw-research-2026-08-03`
+- Roadmap summary: `.omo/roadmap/2026-08-03-ulw-research.md`
