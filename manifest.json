@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "generated_at": "2026-08-02T21:55:40.735291+00:00",
+  "generated_at": "2026-08-03T00:20:35.478715+00:00",
   "targets": {
     "ik-llama-cpp": {
       "name": "ik_llama.cpp (SOTA IQ*K quants)",
@@ -9,7 +9,12 @@
       "backend": "cpu",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": ["chat", "embed", "iq_k", "trellis"],
+      "capabilities": [
+        "chat",
+        "embed",
+        "iq_k",
+        "trellis"
+      ],
       "version": "cb9147f-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -42,7 +47,12 @@
       "backend": "cuda",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": ["chat", "embed", "iq_k", "trellis"],
+      "capabilities": [
+        "chat",
+        "embed",
+        "iq_k",
+        "trellis"
+      ],
       "version": "cb9147f-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -75,7 +85,11 @@
       "backend": "cuda",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": ["chat", "embed", "dgx-spark"],
+      "capabilities": [
+        "chat",
+        "embed",
+        "dgx-spark"
+      ],
       "version": "9131f2e-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -108,7 +122,10 @@
       "backend": "cpu",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": ["chat", "embed"],
+      "capabilities": [
+        "chat",
+        "embed"
+      ],
       "version": "0ab9d6f-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -135,13 +152,17 @@
       "repos": []
     },
     "upstream-cuda": {
-      "name": "llama.cpp upstream CUDA (sm_89/90a)",
+      "name": "llama.cpp upstream CUDA (universal)",
       "repo": "ggml-org/llama.cpp",
       "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
       "backend": "cuda",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": ["chat", "embed", "flash-attn"],
+      "capabilities": [
+        "chat",
+        "embed",
+        "flash-attn"
+      ],
       "version": "0ab9d6f-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -167,6 +188,154 @@
       "skip_reason": null,
       "repos": []
     },
+    "upstream-cuda-sm80": {
+      "name": "llama.cpp upstream CUDA (sm_80)",
+      "repo": "ggml-org/llama.cpp",
+      "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
+      "backend": "cuda",
+      "arch": "x86_64",
+      "gpu_target": "sm_80",
+      "capabilities": [
+        "chat",
+        "embed",
+        "flash-attn"
+      ],
+      "version": "0ab9d6f-1",
+      "build": {
+        "runner": "ubuntu-latest",
+        "script": "targets/upstream-cuda-sm80/build.sh",
+        "os": "ubuntu",
+        "artifact": ""
+      },
+      "default_branch": "main",
+      "gpu_toolchain": "none",
+      "extra_cmake_flags": "-DCMAKE_CUDA_ARCHITECTURES=80",
+      "build_system": "cmake",
+      "binary_names": "llama-server,llama-cli",
+      "test_target": "",
+      "layer": "base",
+      "parent": null,
+      "ci_capable": true,
+      "ci_compile_capable": true,
+      "ci_test_capable": false,
+      "is_llama_cpp_fork": true,
+      "smoke_test": "",
+      "upstream_ref": null,
+      "status": "active",
+      "skip_reason": null,
+      "repos": []
+    },
+    "upstream-cuda-sm86": {
+      "name": "llama.cpp upstream CUDA (sm_86)",
+      "repo": "ggml-org/llama.cpp",
+      "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
+      "backend": "cuda",
+      "arch": "x86_64",
+      "gpu_target": "sm_86",
+      "capabilities": [
+        "chat",
+        "embed",
+        "flash-attn"
+      ],
+      "version": "0ab9d6f-1",
+      "build": {
+        "runner": "ubuntu-latest",
+        "script": "targets/upstream-cuda-sm86/build.sh",
+        "os": "ubuntu",
+        "artifact": ""
+      },
+      "default_branch": "main",
+      "gpu_toolchain": "none",
+      "extra_cmake_flags": "-DCMAKE_CUDA_ARCHITECTURES=86",
+      "build_system": "cmake",
+      "binary_names": "llama-server,llama-cli",
+      "test_target": "",
+      "layer": "base",
+      "parent": null,
+      "ci_capable": true,
+      "ci_compile_capable": true,
+      "ci_test_capable": false,
+      "is_llama_cpp_fork": true,
+      "smoke_test": "",
+      "upstream_ref": null,
+      "status": "active",
+      "skip_reason": null,
+      "repos": []
+    },
+    "upstream-cuda-sm89": {
+      "name": "llama.cpp upstream CUDA (sm_89)",
+      "repo": "ggml-org/llama.cpp",
+      "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
+      "backend": "cuda",
+      "arch": "x86_64",
+      "gpu_target": "sm_89",
+      "capabilities": [
+        "chat",
+        "embed",
+        "flash-attn"
+      ],
+      "version": "0ab9d6f-1",
+      "build": {
+        "runner": "ubuntu-latest",
+        "script": "targets/upstream-cuda-sm89/build.sh",
+        "os": "ubuntu",
+        "artifact": ""
+      },
+      "default_branch": "main",
+      "gpu_toolchain": "none",
+      "extra_cmake_flags": "-DCMAKE_CUDA_ARCHITECTURES=89",
+      "build_system": "cmake",
+      "binary_names": "llama-server,llama-cli",
+      "test_target": "",
+      "layer": "base",
+      "parent": null,
+      "ci_capable": true,
+      "ci_compile_capable": true,
+      "ci_test_capable": false,
+      "is_llama_cpp_fork": true,
+      "smoke_test": "",
+      "upstream_ref": null,
+      "status": "active",
+      "skip_reason": null,
+      "repos": []
+    },
+    "upstream-cuda-sm90": {
+      "name": "llama.cpp upstream CUDA (sm_90)",
+      "repo": "ggml-org/llama.cpp",
+      "ref": "0ab9d6fed73dbc5dc8026c868cb10a6728c4ed48",
+      "backend": "cuda",
+      "arch": "x86_64",
+      "gpu_target": "sm_90",
+      "capabilities": [
+        "chat",
+        "embed",
+        "flash-attn"
+      ],
+      "version": "0ab9d6f-1",
+      "build": {
+        "runner": "ubuntu-latest",
+        "script": "targets/upstream-cuda-sm90/build.sh",
+        "os": "ubuntu",
+        "artifact": ""
+      },
+      "default_branch": "main",
+      "gpu_toolchain": "none",
+      "extra_cmake_flags": "-DCMAKE_CUDA_ARCHITECTURES=90",
+      "build_system": "cmake",
+      "binary_names": "llama-server,llama-cli",
+      "test_target": "",
+      "layer": "base",
+      "parent": null,
+      "ci_capable": true,
+      "ci_compile_capable": true,
+      "ci_test_capable": false,
+      "is_llama_cpp_fork": true,
+      "smoke_test": "",
+      "upstream_ref": null,
+      "status": "active",
+      "skip_reason": null,
+      "repos": []
+    },
     "upstream-rocm": {
       "name": "llama.cpp upstream ROCm baseline",
       "repo": "ggml-org/llama.cpp",
@@ -174,7 +343,10 @@
       "backend": "rocm",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": ["chat", "embed"],
+      "capabilities": [
+        "chat",
+        "embed"
+      ],
       "version": "0ab9d6f-1",
       "build": {
         "runner": "ubuntu-latest",
@@ -207,7 +379,10 @@
       "backend": "vulkan",
       "arch": "x86_64",
       "gpu_target": null,
-      "capabilities": ["chat", "embed"],
+      "capabilities": [
+        "chat",
+        "embed"
+      ],
       "version": "0ab9d6f-1",
       "build": {
         "runner": "ubuntu-latest",
