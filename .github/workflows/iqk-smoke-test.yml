@@ -1,0 +1,94 @@
+# llama-builds/.github/workflows/iqk-smoke-test.yml
+name: IQK Smoke Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-cpu:
+    name: ik_llama.cpp CPU smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ikawrakow/ik_llama.cpp
+          ref: master
+          path: _build/ik
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake ninja-build
+
+      - name: Build ik_llama.cpp (CPU)
+        run: |
+          cmake -S _build/ik -B _build/ik/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGGML_NATIVE=ON
+          cmake --build _build/ik/build -j"$(nproc)"
+
+      - name: Run IQK smoke test
+        run: |
+          cp tests/fixtures/iqk-test-model.iq4.gguf _build/iq/build/
+          cd _build/ik/build
+          ./llama-cli \
+            --model iqk-test-model.iq4.gguf \
+            --prompt test \
+            --n-predict 1
+          echo "Smoke test OK: ik_llama.cpp loaded the IQ4_KS fixture and generated >=1 token"
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf _build
+
+  smoke-cuda:
+    name: ik_llama.cpp CUDA smoke test (manual / self-hosted GPU)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ikawrakow/ik_llama.cpp
+          ref: master
+          path: _build/ik
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake ninja-build
+          wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cuda-toolkit
+
+      - name: Build ik_llama.cpp (CUDA)
+        run: |
+          cmake -S _build/ik -B _build/ik/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGGML_CUDA=ON \
+            -DCMAKE_CUDA_ARCHITECTURES=89
+          cmake --build _build/ik/build -j"$(nproc)"
+
+      - name: Run IQK smoke test (CUDA)
+        run: |
+          cp tests/fixtures/iqk-test-model.iq4.gguf _build/ik/build/
+          cd _build/ik/build
+          ./llama-cli \
+            --model iqk-test-model.iq4.gguf \
+            --prompt test \
+            --n-predict 1
+          echo "Smoke test OK: ik_llama.cpp (CUDA) loaded the IQ4_KS fixture"
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf _build

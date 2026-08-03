@@ -12,7 +12,7 @@
 # extra_cmake_flags=
 # binary_names=llama-server,llama-cli,llama-quantize,llama-bench
 # test_target=
-# smoke_test=llama-cli --version
+# smoke_test=llama-cli --model tests/fixtures/iqk-test-model.iq4.gguf --prompt test --n-predict 1
 # layer=base
 # parent=
 # ci_capable=true
