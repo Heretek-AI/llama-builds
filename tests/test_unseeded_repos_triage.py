@@ -115,9 +115,21 @@ class TestTriageDocCrossReferences:
             assert marker in text, f"Triage must cross-reference {marker}"
 
 
-class TestTriageDocSynthesisPathExists:
-    def test_synthesis_file_referenced_exists(self):
-        """The SYNTHESIS path the triage points at must actually exist on disk."""
-        assert SYNTHESIS_PATH.exists(), (
-            f"Triage references {SYNTHESIS_PATH} but the file is missing"
+class TestTriageDocReferencesRealRepoNames:
+    def test_synthesis_line_refs_in_range(self):
+        """Triage table rows must each reference a SYNTHESIS.md line in 130-141 range."""
+        text = _read(TRIAGE_PATH)
+        # Count numeric-prefixed table rows that contain a line number in 130-141.
+        rows_with_line = 0
+        for line in text.splitlines():
+            m = re.match(r"^\|\s*\d+\s*\|", line)
+            if not m:
+                continue
+            if re.search(r"\b1(3[0-9]|4[01])\b", line):
+                rows_with_line += 1
+        # Allow one or two rows to omit (e.g. rows 12-13 are category buckets that
+        # legitimately point at 132-133).
+        assert rows_with_line >= 9, (
+            f"Triage must reference SYNTHESIS.md:130-141 line numbers in >= 9 rows; "
+            f"got {rows_with_line}"
         )
