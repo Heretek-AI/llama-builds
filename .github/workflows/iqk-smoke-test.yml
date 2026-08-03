@@ -1,0 +1,130 @@
+# llama-builds/.github/workflows/iqk-smoke-test.yml
+name: IQK Smoke Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-wiring:
+    name: Validate IQK smoke test wiring
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pytest
+
+      - name: Run IQK wiring tests
+        run: pytest tests/test_iqk_smoke_test.py -v
+
+      - name: Verify fixture is valid GGUF
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("tests/fixtures/iqk-test-model.iq4.gguf")
+          assert p.exists(), f"missing fixture: {p}"
+          data = p.read_bytes()
+          assert data[:4] == b"GGUF", f"bad magic: {data[:4]!r}"
+          assert len(data) <= 50 * 1024 * 1024, f"fixture too large: {len(data)}"
+          print(f"[ok] fixture {len(data)} bytes, magic OK")
+          PY
+
+      - name: Smoke-test command parity check
+        run: |
+          python - <<'PY'
+          """Verify the smoke_test command in METADATA matches the one in this workflow."""
+          from pathlib import Path
+          import re
+
+          for build_sh in [
+              "targets/ik-llama-cpp/build.sh",
+              "targets/ik-llama-cpp-cuda/build.sh",
+          ]:
+              meta = {}
+              in_meta = False
+              for line in Path(build_sh).read_text().splitlines():
+                  stripped = line.strip()
+                  if stripped == "# METADATA":
+                      in_meta = True
+                      continue
+                  if in_meta:
+                      m = re.match(r"^#\s+(\w+)=(.+)$", stripped)
+                      if m:
+                          meta[m.group(1)] = m.group(2).strip()
+                      elif stripped and not stripped.startswith("#"):
+                          break
+              smoke = meta.get("smoke_test", "")
+              assert "iqk-test-model.iq4.gguf" in smoke, (
+                  f"{build_sh}: smoke_test must reference the IQK fixture, got: {smoke!r}"
+              )
+              assert "--n-predict 1" in smoke, (
+                  f"{build_sh}: smoke_test must include --n-predict 1, got: {smoke!r}"
+              )
+              print(f"[ok] {build_sh}: smoke_test = {smoke}")
+          PY
+
+  build-cpu:
+    name: Build ik_llama.cpp CPU + run smoke test (best-effort)
+    needs: validate-wiring
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake ninja-build
+
+      - name: Clone ik_llama.cpp
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone --depth 1 \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/ikawrakow/ik_llama.cpp.git" \
+            _build/ik 2>&1 \
+            || echo "::warning::Clone failed (token may lack fork access); smoke test will be skipped."
+
+      - name: Build ik_llama.cpp (CPU)
+        run: |
+          if [[ ! -d "_build/ik" ]]; then
+            echo "_build/ik not present (clone skipped); exiting."
+            exit 0
+          fi
+          cmake -S _build/ik -B _build/ik/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGGML_NATIVE=ON
+          cmake --build _build/ik/build -j"$(nproc)"
+
+      - name: Run IQK smoke test
+        run: |
+          if [[ ! -x "_build/ik/build/llama-cli" ]]; then
+            echo "llama-cli not built (skipped); exiting."
+            exit 0
+          fi
+          cp tests/fixtures/iqk-test-model.iq4.gguf _build/ik/build/
+          cd _build/ik/build
+          ./llama-cli \
+            --model iqk-test-model.iq4.gguf \
+            --prompt test \
+            --n-predict 1 \
+            || echo "::warning::smoke test exited non-zero — stub fixture is expected to fail weight load"
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf _build

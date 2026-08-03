@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "generated_at": "2026-08-03T00:28:54.068716+00:00",
+  "generated_at": "2026-08-03T17:44:25.510927+00:00",
   "targets": {
     "ik-llama-cpp": {
       "name": "ik_llama.cpp (SOTA IQ*K quants)",
@@ -34,7 +34,7 @@
       "ci_compile_capable": true,
       "ci_test_capable": true,
       "is_llama_cpp_fork": true,
-      "smoke_test": "llama-cli --version",
+      "smoke_test": "llama-cli --model tests/fixtures/iqk-test-model.iq4.gguf --prompt test --n-predict 1",
       "upstream_ref": "ggml-org/llama.cpp",
       "status": "active",
       "skip_reason": null,
@@ -72,7 +72,7 @@
       "ci_compile_capable": true,
       "ci_test_capable": false,
       "is_llama_cpp_fork": true,
-      "smoke_test": "llama-cli --version",
+      "smoke_test": "llama-cli --model tests/fixtures/iqk-test-model.iq4.gguf --prompt test --n-predict 1",
       "upstream_ref": "ggml-org/llama.cpp",
       "status": "active",
       "skip_reason": null,
